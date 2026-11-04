@@ -129,6 +129,14 @@
           }
         }
       }
+    },
+    "parent_snapshot": {
+      "description": "Previously published snapshot for this project; absent in legacy captures and null for first ingestion.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
     }
   }
 }
