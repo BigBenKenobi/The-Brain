@@ -1,16 +1,36 @@
 # Project Brain
 
-Project Brain preserves useful knowledge from material you intend to discard.
-Retirement readiness measures reviewed knowledge survival, with explicit gaps;
-a complete source backup is an optional separate goal.
-See [the ingestion and retirement standard](docs/knowledge-retirement-standard.md).
+> **North star:** Brain makes it easy to switch between projects and ideas without
+> losing your place. It captures, organises, preserves and retrieves meaningful
+> context with minimal manual maintenance, so you can return to work without
+> reconstructing decisions, progress or reasoning.
 
-A working local CLI for read-only project ingestion, private structured knowledge,
-retained evidence, explicitly approved cross-project retrieval and retirement
-readiness reports. Python 3.11+; no runtime dependencies or model credentials needed.
-The current extractor selects bounded source excerpts across each whole file using
-explicit decision, solution, lesson, limitation and unresolved-issue language.
-These remain documented excerpts, not AI-generated or independently verified insights.
+**The core requirement is effortless project continuity—not another system the
+user must spend time maintaining.** Brain should eventually import existing
+workspaces, capture new work from explicitly permitted sources as it happens,
+distinguish ideas from actual implementation, and offer concise, evidence-backed
+"where did I leave off?" briefings whenever a project is resumed.
+
+The [project vision and guiding product requirements](docs/vision.md) define
+this priority, its design rules and a practical acceptance scenario. When choosing
+features, favour reduced effort to capture, understand, retrieve and resume work
+over additional organisational complexity.
+
+**Current implementation:** a working local Python 3.11+ CLI for read-only
+project ingestion, private structured knowledge, retained source evidence,
+incremental snapshots, explicitly approved cross-project retrieval, and
+knowledge-retirement readiness reports. It uses no runtime dependencies or
+model credentials. The current extractor selects bounded source excerpts
+across whole files using explicit decision, solution, lesson, limitation and
+unresolved-issue language. These are documented excerpts, not AI-generated
+or independently verified insights. Automatic ongoing capture and one-step
+project-resumption briefings remain future work.
+
+Preserving useful knowledge from material you intend to discard remains an
+important use case, not the limit of Brain's purpose. Retirement readiness
+measures reviewed knowledge survival with explicit gaps; complete source backup
+is an optional separate goal. See the
+[ingestion and retirement standard](docs/knowledge-retirement-standard.md).
 
 ## Run
 
