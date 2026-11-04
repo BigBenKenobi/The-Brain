@@ -2,6 +2,34 @@
 
 Status: implemented deterministic MVP, 2026-11-01.
 
+## Continuity direction and first briefing milestone — 4 November 2026
+
+The snapshot lifecycle below describes the existing implementation. The governing
+product direction is now workstation-integrated development understanding and
+purposeful memory, as specified in [vision](vision.md) and the
+[delivery plan](development-state-plan.md). Retirement is one consumer of evidence.
+
+`briefing PROJECT_ID` adds a read-only presentation layer in `brain/briefing.py`.
+It validates a pinned active snapshot, selects bounded excerpts with explicit
+selection reasons, exposes unknowns and omissions, and compares retained paths
+against the recorded predecessor. It does not infer a feature lifecycle, reconcile
+contradictions, query other projects or contact a model. Historical sources and
+pinned supplements retain their provenance and status. Each section uses source
+path/line order, not an inferred importance or activity ranking.
+
+New ingestion and consolidation snapshots carry optional `parent_snapshot`, pointing
+to the previously published snapshot, or null for a first ingestion. Schema version
+1 remains compatible with existing stores: a legacy snapshot with no parent has
+no automatic comparison baseline. We do not guess from timestamps or directory
+contents, which may include abandoned snapshots from failed publications. The
+briefing fails on invalid evidence or an unreadable recorded parent instead of
+silently presenting an unverified comparison. Retained-path absence is not proof
+of deletion, and publication time is not proof that source content is fresh.
+
+The briefing's selection reasons are presentation metadata. They do not implement
+memory admission, compaction or forgetting. Existing full accepted text and history
+remain intact pending a separate, tested retention design.
+
 ## Existing-project assessment
 
 The provided `/home/KenobiBigBen/The Brain` workspace contained no project files,
@@ -49,7 +77,7 @@ whole accepted text, so history can consume substantial disk space.
 
 ## Extraction and retrieval
 
-The deterministic-2 extractor scans every section and 24-line/1800-character
+The deterministic-3 extractor scans every section and 24-line/1800-character
 window, reserves representation for explicit decision, solution, lesson, limitation
 and unresolved language, and selects at most 128 windows for documentation (.md/.txt/.rst), 32 for other text, per accepted file;
 full accepted UTF-8 files remain as supporting evidence. It flags potential reuse
@@ -136,3 +164,4 @@ Newer supplement snapshots are adopted only by explicit reconsolidation. Validat
 retained evidence, summaries, exports, context and retirement checks therefore all
 operate on the consolidated main snapshot. Consolidation does not semantically
 resolve historical contradictions; source dates/status still matter.
+
