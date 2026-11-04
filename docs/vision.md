@@ -4,6 +4,27 @@
 
 ## North star
 
+**Product clarification, 4 November 2026:** The Brain is a workstation-integrated
+development memory and organisational system. It should maintain an evidence-backed
+understanding of projects, current work, implementation stage, decisions, concepts
+and ideas that have not been implemented, tailored to non-linear working habits.
+Returning to a project is one benefit of that continuously maintained understanding.
+
+**Preserve nothing without a reason.** Capture is not automatically lasting memory.
+Useful reasons include an active objective, a decision and its rationale, an open
+problem, a lesson that avoids repeated work, or an idea with a future use. Keep the
+minimum supporting context needed to understand and check those items. Repetition
+should reinforce or update memory, not fill it with duplicate observations.
+The existing full-evidence snapshot store does not yet implement this policy.
+
+Precision includes saying what is unknown. Observed source code, reported success,
+verified behavior, and a user's commitment are distinct. A stale or partial capture
+must never claim exact live state. Routine capture should require little maintenance
+after the user chooses sources and boundaries.
+
+See [the delivery specification and audit](development-state-plan.md) for the first
+milestone, memory rules, acceptance criteria and implementation backlog.
+
 **Brain is a personal knowledge and continuity system that makes switching between projects and ideas inexpensive.** It should capture, organise, preserve and retrieve meaningful context with as little manual maintenance as possible, so someone can leave a project at any point and return later without reconstructing their progress or reasoning.
 
 **The user should not have to maintain Brain in order for Brain to be useful.**
@@ -36,3 +57,4 @@ Someone explores an idea, works on a project for several sessions, changes focus
 The current repository supplies an initial deterministic foundation: read-only source ingestion, private evidence-backed records, historical snapshots, deduplication, scoped retrieval, review and knowledge-retirement checks. It does **not** yet provide automatic ongoing capture from conversations or repositories, semantic project-state reconciliation, or a complete one-step resume experience. Those are product objectives, not delivered capabilities.
 
 Knowledge retention when retiring or discarding a source remains an important use case. It is **one part of the wider continuity mission**, not the mission's limit. See [architecture](architecture.md), [implementation progress](progress.md), and the [knowledge-retirement standard](knowledge-retirement-standard.md) for the existing implementation and its boundaries.
+
