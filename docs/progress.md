@@ -1,5 +1,27 @@
 # Implementation progress — 2026-11-01
 
+## Current product priority — 4 November 2026
+
+The governing direction is now **low-friction project continuity**: capture
+work with minimal user effort, preserve decisions and actual progress, then
+help the user return to any project without reconstructing context.
+See [Brain's mission and acceptance scenario](vision.md).
+
+The next product work should be judged by whether it makes this
+capture → understand → resume loop measurably easier:
+
+1. Validate reliable, source-grounded project-state summaries against real
+   project histories (including conflicting, superseded and incomplete work).
+2. Design explicitly permitted incremental capture of active work, reducing
+   repeated manual importing without silently accessing or changing sources.
+3. Build a concise return-to-project briefing with evidence, confidence,
+   open decisions, implemented versus merely proposed work, and next actions.
+4. Test the whole experience across context switches and long breaks, including
+   honest failure modes, privacy and source-verification checks.
+
+The older technical backlog and test results below remain historical records,
+not claims that the continuity experience is already implemented.
+
 ## Delivered and exercised
 
 - Python standard-library CLI and callable `Brain` interface.
