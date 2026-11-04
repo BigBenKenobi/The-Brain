@@ -177,3 +177,22 @@ retained evidence, historical snapshots and continued inclusion after ingestion
 are covered by fixtures; **21 tests pass**. The main retirement review is refreshed.
 Verification: `Project-Brain/reviews/fedora-document-crosscheck/consolidation-verification.json`.
 Earlier separate-ID guidance is superseded for everyday Fedora queries.
+
+# Development continuity milestone — 4 November 2026
+
+The product direction now explicitly includes workstation-integrated development
+state and retaining knowledge for a clear purpose. See
+[development-state-plan.md](development-state-plan.md) for the baseline audit,
+state/memory specification, acceptance scenario and ordered backlog.
+
+Added `briefing PROJECT_ID` with Markdown and JSON output, bounded evidence excerpts,
+selection reasons, gaps and a comparison to the previous published snapshot.
+Historical and consolidated evidence remains labelled; reported success is never
+upgraded to independent verification. New snapshots record an optional predecessor;
+legacy snapshots remain readable without guessing a baseline from file timestamps.
+
+Validation: 21 baseline tests passed; the full 30-test suite passes with nine new
+briefing tests. No real workstation/private Fedora store was available. This is
+not yet live activity tracking, semantic state reconciliation or memory pruning.
+Next: persist source boundaries, then separate observation and extraction freshness.
+
