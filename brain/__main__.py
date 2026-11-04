@@ -13,6 +13,10 @@ def main(argv=None):
     sub.add_parser('init')
     sub.add_parser('list')
     sub.add_parser('doctor')
+    p = sub.add_parser('briefing', help='Bounded evidence briefing of the last captured project state')
+    p.add_argument('project_id')
+    p.add_argument('--limit', type=int, default=3, help='Excerpts per section, 1 through 20')
+    p.add_argument('--json', action='store_true', help='Return structured briefing data')
     p = sub.add_parser('ingest')
     p.add_argument('source')
     p.add_argument('--project-id', help='Explicit stable identity when relocating a project')
@@ -94,6 +98,12 @@ def main(argv=None):
             elif args.command == 'summary':
                 print(b.summary(args.project_id))
                 return 0
+            elif args.command == 'briefing':
+                result = b.briefing(args.project_id, args.limit)
+                if not args.json:
+                    from .briefing import render_briefing
+                    print(render_briefing(result))
+                    return 0
             elif args.command == 'validate':
                 result = validate(b.snapshot(args.project_id))
             elif args.command == 'archive-evidence':
@@ -116,3 +126,4 @@ def main(argv=None):
 
 if __name__ == '__main__':
     sys.exit(main())
+
