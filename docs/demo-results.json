@@ -1,0 +1,648 @@
+{
+  "source_project": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+  "target_project": "15e021e2-8c29-4b9e-bf2f-70c4d21af1ae",
+  "first_ingestion_metrics": {
+    "files_seen": 5,
+    "bytes_read": 308,
+    "extractions": 3,
+    "cache_hits": 0,
+    "model_calls": 0,
+    "elapsed_seconds": 0.000524
+  },
+  "unchanged_ingestion_metrics": {
+    "files_seen": 5,
+    "bytes_read": 308,
+    "extractions": 0,
+    "cache_hits": 3,
+    "model_calls": 0,
+    "elapsed_seconds": 0.000325
+  },
+  "source_removed_fixture_only": true,
+  "retrieval_after_removal": true,
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "init"
+      ],
+      "exit_code": 0,
+      "result": {
+        "brain": "/home/KenobiBigBen/The Brain/Project-Brain",
+        "schema_version": 1
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "doctor"
+      ],
+      "exit_code": 0,
+      "result": {
+        "python": "3.14.8",
+        "ai_available": false,
+        "model_availability_verified": false,
+        "reason": "No executable AI adapter installed. Model names are configurable placeholders, not availability claims.",
+        "network_submission": false,
+        "extraction": "deterministic-1"
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "ingest",
+        "/tmp/project-brain-demo-iwbk9maf/original"
+      ],
+      "exit_code": 0,
+      "result": {
+        "project_id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+        "snapshot": "c9fda8a7-a119-4f23-a8c9-085f5ad79978",
+        "metrics": {
+          "files_seen": 5,
+          "bytes_read": 308,
+          "extractions": 3,
+          "cache_hits": 0,
+          "model_calls": 0,
+          "elapsed_seconds": 0.000524
+        },
+        "records": 3,
+        "report": {
+          "project_id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+          "classification": "knowledge-only",
+          "verified_recoverable_source_archive": false,
+          "records_preserved": 3,
+          "evidence_blobs_retained": 3,
+          "omitted": [
+            {
+              "path": ".env",
+              "reason": "sensitive filename; content not retained",
+              "size": 29,
+              "status": "sensitive"
+            },
+            {
+              "path": "asset.bin",
+              "reason": "format not interpreted or retained",
+              "size": 2,
+              "status": "unsupported"
+            }
+          ],
+          "coverage_warnings": [],
+          "limitations": [
+            "Only selected UTF-8 evidence is retained. No complete source archive exists.",
+            "Binary assets, dependencies, Git history and omitted materials cannot be reconstructed.",
+            "Extraction does not prove correctness or capture every decision. Review retained evidence before retirement.",
+            "Removing the source can lose working functionality, history, assets and secrets. This command never deletes or moves sources."
+          ]
+        }
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "ingest",
+        "/tmp/project-brain-demo-iwbk9maf/original"
+      ],
+      "exit_code": 0,
+      "result": {
+        "project_id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+        "snapshot": "6789105d-1119-4eb2-a5cd-08c512c669f5",
+        "metrics": {
+          "files_seen": 5,
+          "bytes_read": 308,
+          "extractions": 0,
+          "cache_hits": 3,
+          "model_calls": 0,
+          "elapsed_seconds": 0.000325
+        },
+        "records": 3,
+        "report": {
+          "project_id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+          "classification": "knowledge-only",
+          "verified_recoverable_source_archive": false,
+          "records_preserved": 3,
+          "evidence_blobs_retained": 3,
+          "omitted": [
+            {
+              "path": ".env",
+              "reason": "sensitive filename; content not retained",
+              "size": 29,
+              "status": "sensitive"
+            },
+            {
+              "path": "asset.bin",
+              "reason": "format not interpreted or retained",
+              "size": 2,
+              "status": "unsupported"
+            }
+          ],
+          "coverage_warnings": [],
+          "limitations": [
+            "Only selected UTF-8 evidence is retained. No complete source archive exists.",
+            "Binary assets, dependencies, Git history and omitted materials cannot be reconstructed.",
+            "Extraction does not prove correctness or capture every decision. Review retained evidence before retirement.",
+            "Removing the source can lose working functionality, history, assets and secrets. This command never deletes or moves sources."
+          ]
+        }
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "context",
+        "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+        "SQLite database locking"
+      ],
+      "exit_code": 0,
+      "result": [
+        {
+          "category": "project_specific",
+          "constraints": [
+            "Environment and version compatibility require explicit review"
+          ],
+          "created_at": 1793509408.7755504,
+          "evidence": {
+            "end_line": 3,
+            "path": "README.md",
+            "sha256": "48772f331fc43857f5b9f9cfdb5b4d2d103a110680ac023cd369190810d24d10",
+            "start_line": 1
+          },
+          "evidence_status": "historical_record",
+          "freshness": "unreviewed",
+          "id": "bd915aedf4a767b1306adf7ebe0ff838d7eb8103daa1a09fcc6287d89b8f0688",
+          "limitations": [
+            "Source excerpt; claims and outcomes have not been independently tested",
+            "Extraction may omit relevant surrounding context"
+          ],
+          "project_id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+          "relationships": [],
+          "reuse_candidate": true,
+          "reuse_eligibility": "private_pending_approval",
+          "statement": "# Decision: SQLite retry\nSolution: bounded retry handles SQLite database locking during transient contention.\nLimitation: never retry permanent corruption. Outcome is documented, not independently verified.",
+          "subject": "README.md:1",
+          "technologies": [],
+          "score": 1.0,
+          "why": "Task terms match: database, locking, sqlite; same project",
+          "precedence": "Current project requirements override this historical evidence; resolve conflicts before use."
+        }
+      ]
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "promote",
+        "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+        "bd915aedf4a767b1306adf7ebe0ff838d7eb8103daa1a09fcc6287d89b8f0688",
+        "--approve-sharing",
+        "--technology",
+        "sqlite",
+        "--rationale",
+        "Reviewed as documented bounded retry advice; target must check error class"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "record_id": "bd915aedf4a767b1306adf7ebe0ff838d7eb8103daa1a09fcc6287d89b8f0688",
+        "project_id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+        "evidence_sha256": "48772f331fc43857f5b9f9cfdb5b4d2d103a110680ac023cd369190810d24d10",
+        "technologies": [
+          "sqlite"
+        ],
+        "rationale": "Reviewed as documented bounded retry advice; target must check error class",
+        "approved_at": 1793509408.900616,
+        "review_after": 1801285408.9006162,
+        "permission": "shared",
+        "evidence_status": "historical_record"
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "ingest",
+        "/tmp/project-brain-demo-iwbk9maf/new-project"
+      ],
+      "exit_code": 0,
+      "result": {
+        "project_id": "15e021e2-8c29-4b9e-bf2f-70c4d21af1ae",
+        "snapshot": "9e358466-b929-4ed1-b498-bcb9e1cc1bd0",
+        "metrics": {
+          "files_seen": 1,
+          "bytes_read": 31,
+          "extractions": 1,
+          "cache_hits": 0,
+          "model_calls": 0,
+          "elapsed_seconds": 0.000282
+        },
+        "records": 1,
+        "report": {
+          "project_id": "15e021e2-8c29-4b9e-bf2f-70c4d21af1ae",
+          "classification": "knowledge-only",
+          "verified_recoverable_source_archive": false,
+          "records_preserved": 1,
+          "evidence_blobs_retained": 1,
+          "omitted": [],
+          "coverage_warnings": [],
+          "limitations": [
+            "Only selected UTF-8 evidence is retained. No complete source archive exists.",
+            "Binary assets, dependencies, Git history and omitted materials cannot be reconstructed.",
+            "Extraction does not prove correctness or capture every decision. Review retained evidence before retirement.",
+            "Removing the source can lose working functionality, history, assets and secrets. This command never deletes or moves sources."
+          ]
+        }
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "context",
+        "15e021e2-8c29-4b9e-bf2f-70c4d21af1ae",
+        "SQLite database locking",
+        "--technology",
+        "sqlite"
+      ],
+      "exit_code": 0,
+      "result": [
+        {
+          "category": "project_specific",
+          "constraints": [
+            "Environment and version compatibility require explicit review"
+          ],
+          "created_at": 1793509408.7755504,
+          "evidence": {
+            "end_line": 3,
+            "path": "README.md",
+            "sha256": "48772f331fc43857f5b9f9cfdb5b4d2d103a110680ac023cd369190810d24d10",
+            "start_line": 1
+          },
+          "evidence_status": "historical_record",
+          "freshness": "unreviewed",
+          "id": "bd915aedf4a767b1306adf7ebe0ff838d7eb8103daa1a09fcc6287d89b8f0688",
+          "limitations": [
+            "Source excerpt; claims and outcomes have not been independently tested",
+            "Extraction may omit relevant surrounding context"
+          ],
+          "project_id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+          "relationships": [],
+          "reuse_candidate": true,
+          "reuse_eligibility": "private_pending_approval",
+          "statement": "# Decision: SQLite retry\nSolution: bounded retry handles SQLite database locking during transient contention.\nLimitation: never retry permanent corruption. Outcome is documented, not independently verified.",
+          "subject": "README.md:1",
+          "technologies": [],
+          "score": 1.0,
+          "why": "Task terms match: database, locking, sqlite; explicit sharing approval and declared technology compatibility",
+          "precedence": "Current project requirements override this historical evidence; resolve conflicts before use."
+        }
+      ]
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "search",
+        "orchard confidential launch",
+        "--technology",
+        "sqlite"
+      ],
+      "exit_code": 0,
+      "result": []
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "search",
+        "SQLite museum painting",
+        "--technology",
+        "sqlite"
+      ],
+      "exit_code": 0,
+      "result": []
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "status",
+        "6f15f6e6-f5b0-402f-9a69-49a225f04cbf"
+      ],
+      "exit_code": 0,
+      "result": {
+        "ai": {
+          "available": false,
+          "reason": "No model execution adapter configured; deterministic excerpts only"
+        },
+        "coverage_warnings": [],
+        "created_at": 1793509408.8190043,
+        "extractor": "deterministic-1",
+        "files": [
+          {
+            "path": "README.md",
+            "sha256": "48772f331fc43857f5b9f9cfdb5b4d2d103a110680ac023cd369190810d24d10",
+            "size": 207,
+            "status": "retained"
+          },
+          {
+            "path": ".env",
+            "reason": "sensitive filename; content not retained",
+            "size": 29,
+            "status": "sensitive"
+          },
+          {
+            "path": "asset.bin",
+            "reason": "format not interpreted or retained",
+            "size": 2,
+            "status": "unsupported"
+          },
+          {
+            "path": "private.md",
+            "sha256": "b8ba17c368b1befa544a4d0173d11e24789d72a5941c57b10fbe3cad533009f7",
+            "size": 57,
+            "status": "retained"
+          },
+          {
+            "path": "pyproject.toml",
+            "sha256": "75035a312ee0b79a5d3af914c6d323f85f59a530b257a5ddaf98512ead6be6c1",
+            "size": 44,
+            "status": "retained"
+          }
+        ],
+        "id": "6789105d-1119-4eb2-a5cd-08c512c669f5",
+        "metrics": {
+          "bytes_read": 308,
+          "cache_hits": 3,
+          "elapsed_seconds": 0.000325,
+          "extractions": 0,
+          "files_seen": 5,
+          "model_calls": 0
+        },
+        "project_id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+        "project_types": [
+          "Python"
+        ],
+        "schema_version": 1,
+        "search_index": {
+          "8e949f0f3cde40266d8ea8cc918776148a2caa4c39bd019148f9b36847ca29ef": [
+            "confidential",
+            "customers.",
+            "internal",
+            "launch",
+            "orchard",
+            "plans"
+          ],
+          "bd915aedf4a767b1306adf7ebe0ff838d7eb8103daa1a09fcc6287d89b8f0688": [
+            "bounded",
+            "contention.",
+            "corruption.",
+            "database",
+            "decision",
+            "documented",
+            "during",
+            "handles",
+            "independently",
+            "limitation",
+            "locking",
+            "never",
+            "not",
+            "outcome",
+            "permanent",
+            "retry",
+            "solution",
+            "sqlite",
+            "transient",
+            "verified."
+          ],
+          "ce90be2e9e60540b383bbe9db9daa69ccf817f08e7cd554c0ee4295250e4e7ed": [
+            "1.0",
+            "name",
+            "original",
+            "project",
+            "version"
+          ]
+        }
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "validate",
+        "6f15f6e6-f5b0-402f-9a69-49a225f04cbf"
+      ],
+      "exit_code": 0,
+      "result": {
+        "valid": true,
+        "records": 3
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "summary",
+        "6f15f6e6-f5b0-402f-9a69-49a225f04cbf"
+      ],
+      "exit_code": 0,
+      "result": "# original\n\nProject ID: 6f15f6e6-f5b0-402f-9a69-49a225f04cbf\n\nDeterministic excerpts, not verified conclusions.\n\n## README.md:1\n# Decision: SQLite retry\nSolution: bounded retry handles SQLite database locking during transient contention.\nLimitation: never retry permanent corruption. Outcome is documented, not independently verified.\nEvidence: README.md:1 (historical_record)\n\n## private.md:1\nInternal confidential launch plans for orchard customers.\nEvidence: private.md:1 (historical_record)\n\n## pyproject.toml:1\n[project]\nname = \"original\"\nversion = \"1.0\"\nEvidence: pyproject.toml:1 (observed_implementation)\n\n## Retirement readiness\nKnowledge-only. No complete recoverable source archive exists.\n{\n  \"project_id\": \"6f15f6e6-f5b0-402f-9a69-49a225f04cbf\",\n  \"classification\": \"knowledge-only\",\n  \"verified_recoverable_source_archive\": false,\n  \"records_preserved\": 3,\n  \"evidence_blobs_retained\": 3,\n  \"omitted\": [\n    {\n      \"path\": \".env\",\n      \"reason\": \"sensitive filename; content not retained\",\n      \"size\": 29,\n      \"status\": \"sensitive\"\n    },\n    {\n      \"path\": \"asset.bin\",\n      \"reason\": \"format not interpreted or retained\",\n      \"size\": 2,\n      \"status\": \"unsupported\"\n    }\n  ],\n  \"coverage_warnings\": [],\n  \"limitations\": [\n    \"Only selected UTF-8 evidence is retained. No complete source archive exists.\",\n    \"Binary assets, dependencies, Git history and omitted materials cannot be reconstructed.\",\n    \"Extraction does not prove correctness or capture every decision. Review retained evidence before retirement.\",\n    \"Removing the source can lose working functionality, history, assets and secrets. This command never deletes or moves sources.\"\n  ]\n}\n"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "retire-check",
+        "6f15f6e6-f5b0-402f-9a69-49a225f04cbf"
+      ],
+      "exit_code": 0,
+      "result": {
+        "project_id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+        "classification": "knowledge-only",
+        "verified_recoverable_source_archive": false,
+        "records_preserved": 3,
+        "evidence_blobs_retained": 3,
+        "omitted": [
+          {
+            "path": ".env",
+            "reason": "sensitive filename; content not retained",
+            "size": 29,
+            "status": "sensitive"
+          },
+          {
+            "path": "asset.bin",
+            "reason": "format not interpreted or retained",
+            "size": 2,
+            "status": "unsupported"
+          }
+        ],
+        "coverage_warnings": [],
+        "limitations": [
+          "Only selected UTF-8 evidence is retained. No complete source archive exists.",
+          "Binary assets, dependencies, Git history and omitted materials cannot be reconstructed.",
+          "Extraction does not prove correctness or capture every decision. Review retained evidence before retirement.",
+          "Removing the source can lose working functionality, history, assets and secrets. This command never deletes or moves sources."
+        ]
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "archive-evidence",
+        "6f15f6e6-f5b0-402f-9a69-49a225f04cbf"
+      ],
+      "exit_code": 0,
+      "result": {
+        "archive": "/home/KenobiBigBen/The Brain/Project-Brain/archives/6789105d-1119-4eb2-a5cd-08c512c669f5.zip",
+        "integrity_verified": true,
+        "classification": "knowledge-only",
+        "recoverable_source_archive": false
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "verify-archive",
+        "/home/KenobiBigBen/The Brain/Project-Brain/archives/6789105d-1119-4eb2-a5cd-08c512c669f5.zip"
+      ],
+      "exit_code": 0,
+      "result": {
+        "archive": "/home/KenobiBigBen/The Brain/Project-Brain/archives/6789105d-1119-4eb2-a5cd-08c512c669f5.zip",
+        "integrity_verified": true,
+        "classification": "knowledge-only",
+        "recoverable_source_archive": false
+      }
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "context",
+        "15e021e2-8c29-4b9e-bf2f-70c4d21af1ae",
+        "SQLite database locking",
+        "--technology",
+        "sqlite"
+      ],
+      "exit_code": 0,
+      "result": [
+        {
+          "category": "project_specific",
+          "constraints": [
+            "Environment and version compatibility require explicit review"
+          ],
+          "created_at": 1793509408.7755504,
+          "evidence": {
+            "end_line": 3,
+            "path": "README.md",
+            "sha256": "48772f331fc43857f5b9f9cfdb5b4d2d103a110680ac023cd369190810d24d10",
+            "start_line": 1
+          },
+          "evidence_status": "historical_record",
+          "freshness": "unreviewed",
+          "id": "bd915aedf4a767b1306adf7ebe0ff838d7eb8103daa1a09fcc6287d89b8f0688",
+          "limitations": [
+            "Source excerpt; claims and outcomes have not been independently tested",
+            "Extraction may omit relevant surrounding context"
+          ],
+          "project_id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+          "relationships": [],
+          "reuse_candidate": true,
+          "reuse_eligibility": "private_pending_approval",
+          "statement": "# Decision: SQLite retry\nSolution: bounded retry handles SQLite database locking during transient contention.\nLimitation: never retry permanent corruption. Outcome is documented, not independently verified.",
+          "subject": "README.md:1",
+          "technologies": [],
+          "score": 1.0,
+          "why": "Task terms match: database, locking, sqlite; explicit sharing approval and declared technology compatibility",
+          "precedence": "Current project requirements override this historical evidence; resolve conflicts before use."
+        }
+      ]
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "brain",
+        "--brain",
+        "/home/KenobiBigBen/The Brain/Project-Brain",
+        "list"
+      ],
+      "exit_code": 0,
+      "result": {
+        "projects": {
+          "15e021e2-8c29-4b9e-bf2f-70c4d21af1ae": {
+            "id": "15e021e2-8c29-4b9e-bf2f-70c4d21af1ae",
+            "locations": [
+              "/tmp/project-brain-demo-iwbk9maf/new-project"
+            ],
+            "name": "new-project",
+            "snapshot": "9e358466-b929-4ed1-b498-bcb9e1cc1bd0"
+          },
+          "6f15f6e6-f5b0-402f-9a69-49a225f04cbf": {
+            "id": "6f15f6e6-f5b0-402f-9a69-49a225f04cbf",
+            "locations": [
+              "/tmp/project-brain-demo-iwbk9maf/original"
+            ],
+            "name": "original",
+            "snapshot": "6789105d-1119-4eb2-a5cd-08c512c669f5"
+          }
+        },
+        "schema_version": 1
+      }
+    }
+  ]
+}

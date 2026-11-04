@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project Brain knowledge record",
+  "type": "object",
+  "required": [
+    "id",
+    "project_id",
+    "category",
+    "subject",
+    "statement",
+    "evidence",
+    "evidence_status",
+    "technologies",
+    "constraints",
+    "limitations",
+    "relationships",
+    "reuse_candidate",
+    "reuse_eligibility",
+    "freshness",
+    "created_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "project_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "category": {
+      "const": "project_specific"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "statement": {
+      "type": "string",
+      "maxLength": 1800
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "start_line",
+        "end_line"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "evidence_status": {
+      "enum": [
+        "proposal",
+        "historical_record",
+        "observed_implementation"
+      ]
+    },
+    "reuse_candidate": {
+      "type": "boolean"
+    },
+    "reuse_eligibility": {
+      "const": "private_pending_approval"
+    },
+    "freshness": {
+      "const": "unreviewed"
+    },
+    "created_at": {
+      "type": "number"
+    },
+    "technologies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "knowledge_kinds": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "decision",
+          "solution",
+          "lesson",
+          "limitation",
+          "unresolved"
+        ]
+      }
+    },
+    "source_role": {
+      "enum": [
+        "historical_copy",
+        "implementation",
+        "documented_claim"
+      ]
+    },
+    "consolidated_from": {
+      "type": "object",
+      "required": [
+        "project_id",
+        "snapshot",
+        "record_id",
+        "path"
+      ],
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "snapshot": {
+          "type": "string"
+        },
+        "record_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

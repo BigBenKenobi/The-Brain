@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project Brain configuration",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "max_files",
+    "max_file_bytes",
+    "max_total_bytes",
+    "max_seconds",
+    "review_days",
+    "ai"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "max_files": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_file_bytes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_total_bytes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_seconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "review_days": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "ai": {
+      "type": "object",
+      "required": [
+        "provider",
+        "model",
+        "enabled"
+      ],
+      "properties": {
+        "provider": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled": {
+          "const": false
+        }
+      }
+    }
+  }
+}
