@@ -23,8 +23,10 @@ knowledge-retirement readiness reports. It uses no runtime dependencies or
 model credentials. The current extractor selects bounded source excerpts
 across whole files using explicit decision, solution, lesson, limitation and
 unresolved-issue language. These are documented excerpts, not AI-generated
-or independently verified insights. Automatic ongoing capture and one-step
-project-resumption briefings remain future work.
+or independently verified insights. Automatic ongoing capture and semantic
+project-state reconciliation remain future work. A bounded `briefing` command
+presents the last captured evidence, unknowns and changes; it does not claim live
+activity or verified completion.
 
 Preserving useful knowledge from material you intend to discard remains an
 important use case, not the limit of Brain's purpose. Retirement readiness
@@ -62,12 +64,25 @@ python3 -m brain --brain /tmp/my-brain list
 python3 -m brain --brain /tmp/my-brain status PROJECT_ID
 python3 -m brain --brain /tmp/my-brain context PROJECT_ID 'SQLite database locking'
 python3 -m brain --brain /tmp/my-brain summary PROJECT_ID
+python3 -m brain --brain /tmp/my-brain briefing PROJECT_ID
+python3 -m brain --brain /tmp/my-brain briefing PROJECT_ID --json --limit 3
 python3 -m brain --brain /tmp/my-brain evidence PROJECT_ID README.md --start-line 1 --end-line 20
 python3 -m brain --brain /tmp/my-brain validate PROJECT_ID
 python3 -m brain --brain /tmp/my-brain retire-check PROJECT_ID
 ```
 
 Set `PROJECT_BRAIN_HOME` to avoid repeating `--brain`. Default is `./Project-Brain`.
+
+`briefing` gives a concise Markdown view (or structured JSON) with objective
+candidates, ideas, decisions, problems, reported outcomes and observed code.
+Each selected excerpt has an evidence reference and an inclusion reason. Unknowns,
+historical sources, pinned supplements and omitted results remain explicit.
+The default is three excerpts per section; `--limit` accepts 1 through 20. Changes
+compare retained text against the previous published snapshot when its identity
+was recorded. Legacy snapshots have no guessed baseline. This is a deterministic
+evidence briefing, not a live tracker or automatic memory-retention policy.
+See the [implementation audit and delivery plan](docs/development-state-plan.md).
+
 Re-ingest the same path to reuse unchanged extraction results. Supply
 `ingest NEW_PATH --project-id PROJECT_ID` when relocating a known project.
 
@@ -152,3 +167,4 @@ supplement forward. Re-run consolidation explicitly to adopt a newer supplement
 snapshot; repeating an unchanged consolidation is a no-op. New merged snapshots
 require a fresh retirement review. Consolidation leaves information private and
 preserves documented/proposal/implementation status without elevating outcomes.
+
