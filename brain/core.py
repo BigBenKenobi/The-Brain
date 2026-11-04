@@ -147,6 +147,7 @@ class Brain:
             if supplements.get(supplement_id) == source['id']:
                 return {'project_id': project_id, 'snapshot': target['id'], 'changed': False}
             supplements[supplement_id] = source['id']
+            target['parent_snapshot'] = target['id']
             target['id'] = str(uuid.uuid4())
             target['created_at'] = time.time()
             self._include_supplements(target, supplements)
@@ -271,6 +272,7 @@ class Brain:
             metrics['elapsed_seconds'] = round(time.monotonic() - start, 6)
             sid = str(uuid.uuid4())
             snap = {'schema_version': VERSION, 'id': sid, 'project_id': project_id, 'created_at': time.time(), 'extractor': EXTRACTOR, 'historical': historical, 'excluded_paths': sorted(excluded_paths), 'files': files, 'records': records, 'coverage_warnings': coverage, 'metrics': metrics, 'ai': {'available': False, 'reason': 'No model execution adapter configured; lexically prioritized excerpts only'}, 'evidence': evidence}
+            snap['parent_snapshot'] = old.get('id')
             snap['processing_budgets'] = {k: self.config[k] for k in ('max_files', 'max_file_bytes', 'max_total_bytes', 'max_seconds')}
             snap['search_index'] = {r['id']: sorted(tokens(r['statement'])) for r in records}
             paths = {f['path'] for f in files}
@@ -419,6 +421,16 @@ class Brain:
         lines += ['## Retirement readiness', 'Knowledge-only. No complete recoverable source archive exists.', json.dumps(self.retirement(project_id), indent=2)]
         return '\n'.join(lines)
 
+    def briefing(self, project_id, limit=3):
+        from .briefing import build_briefing
+        current = self.snapshot(project_id)
+        validate(current)
+        parent = current.get('parent_snapshot')
+        previous = self.snapshot(project_id, parent) if parent else None
+        if previous is not None:
+            validate(previous)
+        return build_briefing(self.project(project_id)['name'], current, previous, limit)
+
     def archive(self, project_id):
         # Evidence export, explicitly never classified as a recoverable source archive.
         s = self.snapshot(project_id)
@@ -504,6 +516,10 @@ def extract(project_id, path, text, sha, historical=False):
 def validate(s):
     if s.get('schema_version') != VERSION:
         raise ValueError('Unsupported snapshot version')
+    parent = s.get('parent_snapshot')
+    if parent is not None:
+        if str(uuid.UUID(parent)) != parent or parent == s.get('id'):
+            raise ValueError('Invalid parent snapshot identity')
     for key in ('id', 'project_id', 'files', 'records', 'evidence', 'metrics', 'coverage_warnings'):
         if key not in s:
             raise ValueError('Missing snapshot field: ' + key)
@@ -535,3 +551,4 @@ def validate(s):
     if 'search_index' in s and s['search_index'] != {r['id']: sorted(tokens(r['statement'])) for r in s['records']}:
         raise ValueError('Search index disagrees with canonical records')
     return {'valid': True, 'records': len(ids)}
+
