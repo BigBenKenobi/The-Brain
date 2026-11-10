@@ -256,7 +256,8 @@ class Brain:
                             entry.update(status='duplicate', duplicate_of=seen[sha])
                             continue
                         seen[sha] = rel
-                        if old.get('extractor') == EXTRACTOR and old.get('historical', False) == historical and oldfiles.get(rel, {}).get('sha256') == sha:
+                        # Duplicate inventory entries have no completed extraction to reuse.
+                        if old.get('extractor') == EXTRACTOR and old.get('historical', False) == historical and oldfiles.get(rel, {}).get('status') == 'retained' and oldfiles.get(rel, {}).get('sha256') == sha:
                             extracted = oldrecords.get(rel, [])
                             metrics['cache_hits'] += 1
                         else:
