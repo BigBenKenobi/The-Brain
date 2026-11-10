@@ -337,6 +337,11 @@ def render_briefing(briefing):
                 lines += [f"Combined support from {len(item['consolidated_members'])} other retained items; original identities remain in history."]
             if item.get('consolidation_conflicts'):
                 lines += ['Consolidation needs review: later evidence relationships conflict with the grouping.']
+            for check in item.get('verified_behaviors', []):
+                lines += [f"Scoped verification (local observer attestation; {check['applicability']}): {check['behavior']}",
+                          f"Environment: {check['environment']} / revision {check['source_revision']}",
+                          f"Reviewer: {check['reviewer']} / receipt event {check['event_id']} / SHA-256 {check['receipt_sha256']}",
+                          'This does not verify the whole item or establish present-day behavior.']
             for claim in item['claims']:
                 lines += [f"Evidence: {claim['path']}:{claim['start_line']}-{claim['end_line']} / snapshot {claim['snapshot']} / record {claim['record_id']}"]
         if maintained['omitted_items']:

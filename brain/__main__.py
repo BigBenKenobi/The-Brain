@@ -138,6 +138,17 @@ def main(argv=None):
     p.add_argument('project_id')
     p.add_argument('event_id')
     p.add_argument('--rationale', required=True)
+    p = sub.add_parser('state-verify', help='Explicitly review a scoped execution receipt; never certify an entire item')
+    p.add_argument('project_id')
+    p.add_argument('item_id')
+    p.add_argument('receipt_directory')
+    p.add_argument('--reviewer', required=True)
+    p.add_argument('--rationale', required=True)
+    p.add_argument('--attest-observed', action='store_true', required=True,
+                   help='Attest that you observed this execution and reviewed its assertion coverage and environment')
+    p = sub.add_parser('state-receipt', help='Read retained verification receipt bytes and revocation status')
+    p.add_argument('project_id')
+    p.add_argument('event_id')
     p = sub.add_parser('state-consolidate', help='Group reviewed duplicate items while preserving evidence and undo')
     p.add_argument('project_id')
     p.add_argument('survivor')
@@ -245,7 +256,7 @@ def main(argv=None):
                 result = b.relate(args.project_id, args.older, args.replacement, args.kind, args.rationale)
             elif args.command == 'undo-relation':
                 result = b.undo_relation(args.project_id, args.older, args.rationale)
-            elif args.command in ('state', 'state-sync', 'state-correct', 'state-relate', 'state-undo', 'state-consolidate'):
+            elif args.command in ('state', 'state-sync', 'state-correct', 'state-relate', 'state-undo', 'state-consolidate', 'state-verify', 'state-receipt'):
                 from .state import ProjectState, bounded_view
                 state = ProjectState(b, args.project_id)
                 if args.command == 'state':
@@ -256,6 +267,11 @@ def main(argv=None):
                     result = state.undo(args.event_id, args.rationale)
                 elif args.command == 'state-consolidate':
                     result = state.consolidate(args.survivor, args.absorbed, args.rationale)
+                elif args.command == 'state-verify':
+                    result = state.verify(args.item_id, args.receipt_directory, args.reviewer,
+                                          args.rationale, observed=args.attest_observed)
+                elif args.command == 'state-receipt':
+                    result = state.receipt(args.event_id)
                 else:
                     evidence = {'snapshot': args.snapshot or b.project(args.project_id)['snapshot'], 'record_id': args.record_id}
                     if args.command == 'state-correct':

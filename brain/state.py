@@ -10,6 +10,7 @@ import time
 import uuid
 from .core import digest, read, write, validate, SECRET
 from .briefing import configuration_source
+from .verification import load_bundle, validate_bundle, subject
 
 KINDS = {'decision', 'idea', 'attempt', 'blocker'}
 STAGES = {'proposed', 'accepted', 'in_progress', 'implemented', 'unknown'}
@@ -72,7 +73,7 @@ class ProjectState:
         if not self.head.exists():
             return []
         head = read(self.head)
-        if head.get('version') not in (1, 2) or head.get('project_id') != self.project_id:
+        if head.get('version') not in (1, 2, 3) or head.get('project_id') != self.project_id:
             raise ValueError('Invalid state journal identity')
         events = []
         seen = set()
@@ -83,9 +84,14 @@ class ProjectState:
             event = read(self.root / 'events' / (eid + '.json'))
             if event['id'] != eid or event['project_id'] != self.project_id:
                 raise ValueError('State event identity mismatch')
-            if event.get('type') not in ('correct', 'relate', 'consolidate', 'undo'):
+            if event.get('type') not in ('correct', 'relate', 'consolidate', 'verify', 'undo'):
                 raise ValueError('Unsupported state event')
             self._rationale(event.get('rationale'))
+            if event['type'] == 'verify':
+                if head['version'] < 3 or event.get('attestation') != 'observed_execution_and_reviewed_scope':
+                    raise ValueError('Invalid verification authority or journal version')
+                self._rationale(event.get('reviewer'))
+                validate_bundle(event['verification_bundle'])
             if event['type'] == 'undo':
                 target = next((e for e in events if e['id'] == event.get('target')), None)
                 if target is None or target['type'] == 'undo' or target['id'] in undone:
@@ -159,7 +165,7 @@ class ProjectState:
         for event in events:
             if event['type'] == 'undo' or event['id'] in disabled:
                 continue
-            if event['type'] not in ('correct', 'relate', 'consolidate'):
+            if event['type'] not in ('correct', 'relate', 'consolidate', 'verify'):
                 raise ValueError('Unsupported state event')
             # Explicitly reviewed endpoints remain available even outside the scan budget.
             for endpoint in event['seeds']:
@@ -169,7 +175,18 @@ class ProjectState:
                     raise ValueError('State endpoint identity mismatch')
                 items.setdefault(iid, seed(self.project_id, snapshot, record, endpoint['kind']))
             snapshot, record = self.evidence(event['evidence'])
-            if event['type'] == 'correct':
+            if event['type'] == 'verify':
+                receipt = validate_bundle(event['verification_bundle'])
+                items[event['item_id']].setdefault('verified_behaviors', []).append({
+                    'event_id': event['id'], 'behavior': receipt['scope'],
+                    'environment': receipt['environment_description'],
+                    'source_revision': receipt['source_before']['head'],
+                    'receipt_sha256': event['verification_bundle']['receipt_sha256'],
+                    'reviewer': event['reviewer'], 'rationale': event['rationale'],
+                    'subject': event['subject'], 'evidence_strength': 'independently_verified',
+                    'authority': 'explicit_local_observer_attestation',
+                    'limitation': 'Scoped reviewer attestation; receipt hashes do not authenticate authorship or prove unrelated claims.'})
+            elif event['type'] == 'correct':
                 item = items[event['item_id']]
                 self.validate_changes(event['changes'])
                 item.update(event['changes'])
@@ -209,6 +226,14 @@ class ProjectState:
                     item['currency'] = 'uncertain'
         for item in items.values():
             available = any(c['record_id'] in active_records for c in item['claims'])
+            for verification in item.get('verified_behaviors', []):
+                # Verification stays scoped and historical; a later correction,
+                # grouping or contradictory relation cannot inherit its authority.
+                conflicts = any(e['kind'] in ('contradicts', 'supersedes') and
+                                item['id'] in (e['from'], e['to']) for e in relations)
+                verification['applicability'] = ('reviewed_subject' if
+                    verification['subject'] == subject(item) and not conflicts
+                    and not item.get('consolidated_into') else 'historical_review_required')
             item['availability'] = 'retained_in_current_capture' if available else 'retained_history_only'
             if not available and item['currency'] not in ('superseded', 'historical'):
                 # Absence affects source availability, not work stage or resolution.
@@ -306,7 +331,8 @@ class ProjectState:
         event = dict(event, id=str(uuid.uuid4()), project_id=self.project_id, created_at=time.time(),
                      authority='explicit_local_interpretation', evidence_strength='reported')
         write(self.root / 'events' / (event['id'] + '.json'), event)
-        version = 2 if event['type'] == 'consolidate' or (self.head.exists() and read(self.head).get('version') == 2) else 1
+        previous_version = read(self.head).get('version', 1) if self.head.exists() else 1
+        version = max(previous_version, 3 if event['type'] == 'verify' else 2 if event['type'] == 'consolidate' else 1)
         write(self.head, {'version': version, 'project_id': self.project_id, 'events': [e['id'] for e in events] + [event['id']]})
         return event
 
@@ -369,6 +395,36 @@ class ProjectState:
             refs = self._seed_refs(state, [iid])
             return self._append({'type': 'correct', 'item_id': iid, 'changes': deepcopy(changes),
                 'evidence': reference(snapshot, record), 'rationale': rationale, 'seeds': refs})
+
+    def verify(self, iid, directory, reviewer, rationale, *, observed=False):
+        """Adopt one scoped check only with an explicit local observer attestation.
+
+        Retain receipt/output bytes in the immutable event. This never changes
+        item-wide strength, work stage, currency, sharing or capture policy.
+        """
+        if observed is not True:
+            raise ValueError('Explicit observation and scope-review attestation required')
+        self._rationale(reviewer); self._rationale(rationale)
+        bundle = load_bundle(directory)
+        with self.brain.lock():
+            receipt = validate_bundle(bundle)
+            if receipt['cwd'] not in self.brain.project(self.project_id).get('locations', []):
+                raise ValueError('Receipt working directory is not a recorded location of this project')
+            state = self.view()
+            refs = self._seed_refs(state, [iid])
+            return self._append({'type': 'verify', 'item_id': iid,
+                'verification_bundle': bundle, 'reviewer': reviewer,
+                'attestation': 'observed_execution_and_reviewed_scope',
+                'subject': subject(state['items'][iid]), 'evidence': refs[0]['evidence'],
+                'rationale': rationale, 'seeds': refs})
+
+    def receipt(self, event_id):
+        """Read preserved receipt bytes, including revoked verification history."""
+        events = self.events()
+        event = next((e for e in events if e['id'] == event_id and e['type'] == 'verify'), None)
+        if event is None:
+            raise ValueError('Unknown verification event')
+        return {'event': event, 'active': not any(e.get('target') == event_id for e in events)}
 
     def relate(self, source, target, kind, evidence, rationale):
         if kind not in RELATIONS:

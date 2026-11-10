@@ -55,6 +55,11 @@ reviewed items priority. It does not resolve or delete omitted items. Same-corpu
 paired selection and a ten-capture simulated absence trial are recorded in
 `evaluations/maintained-state-results.json`.
 
+The Tinker Project memory consumer has also been exercised from installed wheels,
+using only the installed Brain entry point and site-packages imports. See
+`evaluations/installed-memory-results.json`. Its display is read-only; a view does
+not accept candidates, create corrections, or change sharing permissions.
+
 ## Explicit consolidation of duplicate support
 
 ```text
@@ -91,6 +96,10 @@ After undo the journal stays version 2 because its audit history still contains 
 consolidation. Keep a compatible reader for that history; undo does not authorize
 rewriting the head back to version 1.
 
-## Explicit qualification caveats
+## Scoped verification review
 
-Briefings surface source statements that acceptance remains open or pending, or that qualification is a separate gate. These are quoted limits, not inferred failures or passes. When a long paragraph hides the limit beyond its preview, the exact caveat sentence is shown with offsets into the unchanged retained record. Ordinary product context remains available alongside the caveat. Open full evidence for surrounding context; phrase selection does not establish semantic accuracy or human acceptance.
+Explicit observer review can attach a bounded execution receipt to one behavior and
+environment without elevating the whole item. This uses journal version3, retains
+receipt bytes and supports undo, historical applicability and compaction checks. See
+[verification evidence](verification-evidence.md) for the trust boundary and commands.
+Generic corrections and models still cannot assert verification.
