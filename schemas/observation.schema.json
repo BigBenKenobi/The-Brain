@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Observation storage record (materialise before canonical validation)",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "project_id",
+    "storage_format",
+    "content_snapshot",
+    "files",
+    "created_at",
+    "parent_snapshot"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "project_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "content_snapshot": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "storage_format": {
+      "const": "observation-1"
+    },
+    "files": {
+      "type": "array"
+    },
+    "created_at": {
+      "type": "number"
+    },
+    "parent_snapshot": {
+      "type": "string",
+      "format": "uuid"
+    }
+  },
+  "not": {
+    "anyOf": [
+      {
+        "required": [
+          "evidence"
+        ]
+      },
+      {
+        "required": [
+          "records"
+        ]
+      },
+      {
+        "required": [
+          "search_index"
+        ]
+      }
+    ]
+  }
+}

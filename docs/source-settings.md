@@ -21,8 +21,7 @@ python3 -m brain --brain /path/to/store relocate-source SOURCE_ID /new/project/l
 `configure-source` restores store defaults. `--new-source --project-id PROJECT_ID`
 adds an independent source. Relocation preserves identity and configuration;
 ambiguous legacy adoption requires an explicit `--adopt-legacy` mapping.
-Sources start with automatic capture disabled. This package provides source
-policy and manual refresh, not a scheduler or unattended refresh service.
+Sources start with automatic capture disabled. The bounded worker and optional timer are described in [automatic refresh](automatic-refresh.md).
 
 Successful observation, extraction time, historical status, and approval expiry
 are separate facts. An unchanged successful read updates observation without
@@ -40,7 +39,8 @@ or implementation is not independently verified behavior.
 
 ## Store compatibility and rollback
 
-New stores use writer format 2. Version-1 stores remain readable but require an
+Source settings introduced writer format 2. This package now creates writer-3
+stores for lightweight observations. Version-1/2 stores remain readable but require an
 explicit upgrade before writes:
 
 ```sh
@@ -52,12 +52,12 @@ lock, copies the store and compatible reader code, verifies copied file hashes
 and snapshot structure, and only then changes the configuration writer version.
 The backup destination must not exist and must be outside the store. Existing
 snapshots and approval files are not rewritten. Old version-1 writers reject the
-version-2 configuration. For rollback, stop writers and restore the complete
+version-3 configuration. For rollback, stop writers and restore the complete
 backup store with its saved code; do not mix files from before and after upgrade.
-The saved version-2 reader reads the version-1 backup but requires upgrade before
+The saved version-3 reader reads the version-1 backup but requires upgrade before
 writing it; retain the previous application release for immediate legacy writes.
 
-This delivery cannot open later version-3 or version-4 stores. It is not a
+This delivery cannot open later version-4 stores. It is not a
 runtime replacement for such deployments.
 
 ## Validation

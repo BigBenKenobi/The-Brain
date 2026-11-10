@@ -12,7 +12,7 @@ import uuid
 import zipfile
 
 VERSION = 1
-STORE_VERSION = 2
+STORE_VERSION = 3
 EXTRACTOR = 'deterministic-3'
 EXCLUDED = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', 'dist', 'build', '.cache', '.pytest_cache', 'target'}
 TEXT = {'.md', '.rst', '.txt', '.py', '.js', '.ts', '.tsx', '.jsx', '.json', '.toml', '.yaml', '.yml', '.ini', '.cfg', '.rs', '.go', '.java', '.c', '.h', '.cpp', '.cs', '.sh', '.sql', '.conf', '.config', '.service', '.timer', '.target', '.desktop', '.rules', '.container', '.widget', '.menu', '.theme', '.dirs', '.list', '.log', '.stderr', '.patch', '.xml', '.ui', '.css', '.html', '.swift', '.plist', '.xcprivacy', '.pbxproj', '.xcscheme', '.sha256', '.tsv'}
@@ -62,7 +62,7 @@ class Brain:
         self.root = Path(root).resolve()
         self.config = read(self.root / 'config.json')
         self.registry_path = self.root / 'registry.json'
-        if self.config.get('schema_version') not in (1, STORE_VERSION):
+        if self.config.get('schema_version') not in (1, 2, STORE_VERSION):
             raise ValueError('Unsupported configuration version')
         for key in ('max_files', 'max_file_bytes', 'max_total_bytes', 'max_seconds', 'review_days'):
             if type(self.config.get(key)) is not int or self.config[key] <= 0:
@@ -71,11 +71,11 @@ class Brain:
             raise ValueError('AI execution is unavailable; ai.enabled must remain false')
 
     @contextlib.contextmanager
-    def lock(self, writable=True):
+    def lock(self, writable=True, blocking=True):
         # Advisory flock is automatically released on process failure; no stale locks.
         import fcntl
         with (self.root / '.lock').open('a') as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
+            fcntl.flock(f, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
             if writable and read(self.root / 'config.json').get('schema_version') != STORE_VERSION:
                 raise ValueError('Legacy store is read-only; run upgrade-store with a backup destination first')
             yield
@@ -92,32 +92,36 @@ class Brain:
         backup = Path(backup).resolve()
         if backup == self.root or self.root in backup.parents or backup in self.root.parents:
             raise ValueError('Backup must be outside the store')
-        with self.lock(writable=False):
-            config = read(self.root / 'config.json')
-            if config['schema_version'] == STORE_VERSION:
-                return {'changed': False, 'schema_version': STORE_VERSION}
-            backup.mkdir(parents=True, exist_ok=False, mode=0o700)
-            shutil.copytree(self.root, backup / 'store')
-            shutil.copytree(Path(__file__).parent, backup / 'code' / 'brain',
-                            ignore=shutil.ignore_patterns('__pycache__'))
-            hashes = {}
-            for path in (backup / 'store').rglob('*'):
-                if path.is_file() and path.name != '.lock':
-                    relative = str(path.relative_to(backup / 'store'))
-                    hashes[relative] = digest(path.read_bytes())
-                    if hashes[relative] != digest((self.root / relative).read_bytes()):
-                        raise ValueError('Backup copy verification failed')
-            count = 0
-            for path in (backup / 'store' / 'projects').glob('*/snapshots/*.json'):
-                validate(read(path))
-                count += 1
-            write(backup / 'rollback.json', {'store': str(self.root), 'schema_version': config['schema_version'],
-                'snapshots_validated': count, 'store_file_sha256': hashes,
-                'instruction': 'Stop all Brain writers; restore store/ and use code/ together. Historical snapshots were not rewritten.'})
-            config['schema_version'] = STORE_VERSION
-            write(self.root / 'config.json', config)
-            self.config = config
-            return {'changed': True, 'schema_version': STORE_VERSION, 'backup': str(backup), 'snapshots_validated': count}
+        from .refresh import RefreshWorker
+        with RefreshWorker(self).worker_lock() as available:
+            if not available:
+                raise ValueError('Stop the active refresh worker before upgrading')
+            with self.lock(writable=False):
+                config = read(self.root / 'config.json')
+                if config['schema_version'] == STORE_VERSION:
+                    return {'changed': False, 'schema_version': STORE_VERSION}
+                backup.mkdir(parents=True, exist_ok=False, mode=0o700)
+                shutil.copytree(self.root, backup / 'store')
+                shutil.copytree(Path(__file__).parent, backup / 'code' / 'brain',
+                                ignore=shutil.ignore_patterns('__pycache__'))
+                hashes = {}
+                for path in (backup / 'store').rglob('*'):
+                    if path.is_file() and path.name != '.lock':
+                        relative = str(path.relative_to(backup / 'store'))
+                        hashes[relative] = digest(path.read_bytes())
+                        if hashes[relative] != digest((self.root / relative).read_bytes()):
+                            raise ValueError('Backup copy verification failed')
+                count = 0
+                for path in (backup / 'store' / 'projects').glob('*/snapshots/*.json'):
+                    validate(read(path))
+                    count += 1
+                write(backup / 'rollback.json', {'store': str(self.root), 'schema_version': config['schema_version'],
+                    'snapshots_validated': count, 'store_file_sha256': hashes,
+                    'instruction': 'Stop all Brain writers; restore store/ and use code/ together. Historical snapshots were not rewritten.'})
+                config['schema_version'] = STORE_VERSION
+                write(self.root / 'config.json', config)
+                self.config = config
+                return {'changed': True, 'schema_version': STORE_VERSION, 'backup': str(backup), 'snapshots_validated': count}
 
     def configure_source(self, source_id, *, excluded_paths=None, historical=None,
                          budgets=None, enabled=None, new_location=None):
@@ -163,6 +167,23 @@ class Brain:
         result = read(self.root / 'projects' / project_id / 'snapshots' / (sid + '.json'))
         if result['project_id'] != project_id or result['id'] != sid:
             raise ValueError('Snapshot identity mismatch')
+        if result.get('storage_format') == 'observation-1':
+            base_id = result['content_snapshot']
+            if str(uuid.UUID(base_id)) != base_id or base_id == sid:
+                raise ValueError('Invalid observation content reference')
+            base = read(self.root / 'projects' / project_id / 'snapshots' / (base_id + '.json'))
+            if base.get('storage_format') or base['id'] != base_id or base['project_id'] != project_id:
+                raise ValueError('Observation must reference a full snapshot in the same project')
+            validate(base)
+            for key in ('evidence', 'records', 'search_index'):
+                if key in result:
+                    raise ValueError('Observation contains conflicting embedded content')
+                result[key] = base[key]
+            del result['storage_format']
+            del result['content_snapshot']
+            validate(result)
+        elif result.get('storage_format'):
+            raise ValueError('Unsupported snapshot storage format')
         return result
 
     def _include_supplements(self, snapshot, supplements):
@@ -245,6 +266,8 @@ class Brain:
         try:
             return self._ingest(source, project_id, excluded_paths, historical, **options)
         except OSError as error:
+            if isinstance(error, BlockingIOError):
+                raise  # A background worker must not wait again just to log contention.
             registry = read(self.registry_path)
             sid = options.get('source_id')
             path = str(Path(source).resolve())
@@ -260,12 +283,13 @@ class Brain:
             raise
 
     def _ingest(self, source, project_id=None, excluded_paths=None, historical=None,
-               *, source_id=None, budgets=None, new_source=False, adopt_legacy=False, automatic=False):
+               *, source_id=None, budgets=None, new_source=False, adopt_legacy=False, automatic=False,
+               max_store_bytes=None, runtime_budgets=None):
         from .sources import BUDGETS, location, resolve
         # Resolution and publication share one writer lock. No half-saved settings.
         source = location(self.root, source)
         explicit_project = project_id is not None
-        with self.lock():
+        with self.lock(blocking=not automatic):
             registry = read(self.registry_path)
             projects = registry['projects']
             if source_id:
@@ -299,7 +323,11 @@ class Brain:
             effective = configured['configuration']
             excluded_paths = set(effective['excluded_paths'])
             historical = effective['historical']
-            limits = effective['budgets']
+            limits = dict(effective['budgets'])
+            for key, value in (runtime_budgets or {}).items():
+                if key not in limits or type(value) is not int or value < 1:
+                    raise ValueError('Invalid runtime budget')
+                limits[key] = min(limits[key], value)
             prefix = configured['prefix']
             old_effective = old.get('source_configurations', {}).get(source_id, {})
             previous_historical = old_effective.get('configuration', {}).get('historical', old.get('historical', False))
@@ -437,15 +465,37 @@ class Brain:
             self._include_supplements(snap, projects.get(project_id, {}).get('supplements', {}))
             validate(snap)
             folder = self.root / 'projects' / project_id
-            write(folder / 'snapshots' / (sid + '.json'), snap)
+            # Same evidence and canonical records can reference one immutable full
+            # snapshot. Inventory and observation metadata remain independent.
+            unchanged = old.get('id') is not None and all(snap[k] == old.get(k) for k in ('evidence', 'search_index')) and {
+                r['id']: r for r in snap['records']} == {r['id']: r for r in old['records']}
+            stored = dict(snap)
+            if unchanged:
+                previous_storage = read(folder / 'snapshots' / (old['id'] + '.json'))
+                base_id = previous_storage.get('content_snapshot', old['id'])
+                stored.update(storage_format='observation-1', content_snapshot=base_id)
+                for key in ('evidence', 'records', 'search_index'):
+                    del stored[key]
             # Only this atomic pointer publication exposes a completed snapshot.
             project = projects.setdefault(project_id, {'id': project_id, 'name': source.name, 'locations': []})
             if str(source) not in project['locations']:
                 project['locations'].append(str(source))
             project['snapshot'] = sid
             registry.setdefault('sources', {})[source_id] = configured
+            if max_store_bytes is not None:
+                if type(max_store_bytes) is not int or max_store_bytes < 1:
+                    raise ValueError('Invalid storage capacity')
+                used = sum(p.stat().st_size for p in self.root.rglob('*') if p.is_file())
+                # Reserve temporary atomic-publication space and bounded health state.
+                state_path = self.root / 'refresh-state.json'
+                control_reserve = max(65536, 2 * state_path.stat().st_size + 8192) if state_path.exists() else 65536
+                needed = len(json.dumps(stored, indent=2, sort_keys=True).encode()) + len(json.dumps(registry, indent=2, sort_keys=True).encode()) + control_reserve
+                if used + needed > max_store_bytes:
+                    raise OSError('Capture deferred: storage capacity reached')
+            write(folder / 'snapshots' / (sid + '.json'), stored)
             write(self.registry_path, registry)
-            return {'project_id': project_id, 'source_id': source_id, 'snapshot': sid, 'metrics': metrics, 'records': len(snap['records']), 'report': self.retirement(project_id)}
+            return {'project_id': project_id, 'source_id': source_id, 'snapshot': sid, 'observation_only': unchanged,
+                    'metrics': metrics, 'records': len(snap['records']), 'capture': snap['capture'], 'report': self.retirement(project_id)}
 
     def retained_evidence(self, project_id, path, start_line=1, end_line=None, snapshot_id=None):
         """Read only the published snapshot; never reopen the original source."""

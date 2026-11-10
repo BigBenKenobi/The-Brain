@@ -14,6 +14,13 @@ def main(argv=None):
     sub.add_parser('list')
     sub.add_parser('doctor')
     sub.add_parser('sources', help='List explicitly configured sources')
+    sub.add_parser('refresh-once', help='Run one bounded due-source refresh pass')
+    sub.add_parser('refresh-status', help='Show automatic capture policy and health')
+    p = sub.add_parser('refresh-policy', help='Configure opt-in background capture')
+    p.add_argument('--paused', action=argparse.BooleanOptionalAction, default=None)
+    for setting in ('interval-seconds', 'retry-seconds', 'max-retry-seconds', 'max-sources-per-run',
+                    'max-run-seconds', 'max-files-per-run', 'max-bytes-per-run', 'max-store-bytes'):
+        p.add_argument('--' + setting, type=int)
     p = sub.add_parser('upgrade-store', help='Back up and upgrade the store writer format')
     p.add_argument('--backup', required=True)
     p = sub.add_parser('refresh', help='Refresh one source using saved settings')
@@ -111,6 +118,15 @@ def main(argv=None):
                         budgets = {**{key: b.config[key] for key in BUDGETS}, **budgets}
                     result = b.configure_source(args.source_id, excluded_paths=exclusions,
                         historical=args.historical, budgets=budgets, enabled=args.enabled)
+            elif args.command in ('refresh-once', 'refresh-status', 'refresh-policy'):
+                from .refresh import RefreshWorker, DEFAULT_POLICY
+                worker = RefreshWorker(b)
+                if args.command == 'refresh-once':
+                    result = worker.run_once()
+                elif args.command == 'refresh-status':
+                    result = worker.status()
+                else:
+                    result = worker.configure(**{key: getattr(args, key) for key in DEFAULT_POLICY if getattr(args, key) is not None})
             elif args.command == 'sources':
                 from .core import read
                 result = list(read(b.registry_path).get('sources', {}).values())
@@ -127,7 +143,7 @@ def main(argv=None):
                 from .core import read
                 result = []
                 for path in sorted((b.root / 'projects' / args.project_id / 'snapshots').glob('*.json')):
-                    snap = read(path)
+                    snap = b.snapshot(args.project_id, path.stem)
                     result.append({'snapshot': snap['id'], 'created_at': snap['created_at'], 'active': snap['id'] == project['snapshot'], 'records': len(snap['records'])})
                 result.sort(key=lambda item: item['created_at'])
             elif args.command == 'review-retirement':

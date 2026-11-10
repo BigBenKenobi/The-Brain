@@ -1,0 +1,15 @@
+[Unit]
+Description=Bounded local Project Brain refresh
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Documents/The Brain/Project-Brain/runtime/current
+ExecStart=/usr/bin/python3 -m brain --brain "%h/Documents/The Brain/Project-Brain" refresh-once
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths="%h/Documents/The Brain/Project-Brain"
+RestrictAddressFamilies=AF_UNIX
+TimeoutStartSec=90
+MemoryMax=512M

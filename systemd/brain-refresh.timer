@@ -1,0 +1,11 @@
+[Unit]
+Description=Check due opted-in Brain sources each minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+Persistent=true
+AccuracySec=15s
+Unit=brain-refresh.service
+
+[Install]
+WantedBy=timers.target

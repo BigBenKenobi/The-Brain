@@ -15,9 +15,10 @@
     "schema_version": {
       "enum": [
         1,
-        2
+        2,
+        3
       ],
-      "description": "Version 1 is readable; version 2 guards persistent source writers."
+      "description": "Version 3 guards lightweight observation snapshots; versions 1 and 2 remain read-only until explicit upgrade."
     },
     "max_files": {
       "type": "integer",

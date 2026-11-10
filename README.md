@@ -171,3 +171,6 @@ preserves documented/proposal/implementation status without elevating outcomes.
 
 Saved source configuration, observation freshness and the explicit version-1 to
 version-2 store upgrade are documented in [source settings](docs/source-settings.md).
+
+Opt-in scheduling, pause/retry, bounded storage and writer-3 observations are
+documented in [automatic local refresh](docs/automatic-refresh.md).
