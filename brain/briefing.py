@@ -52,7 +52,13 @@ def configuration_source(record):
 
 def qualification_caveat(text):
     """Detect explicit limits on verification, without deciding acceptance state."""
-    return bool(re.search(r'\b(?:not(?!\s+(?:only|just)\b)|never)\b[^.!?]{0,100}\b(?:passed|verified|validated|qualified|accepted)\b|\b(?:unverified|unvalidated|unqualified)\b', text, re.I))
+    negated = r'\b(?:not(?!\s+(?:only|just)\b)|never)\b[^.!?]{0,100}\b(?:passed|verified|validated|qualified|accepted)\b|\b(?:unverified|unvalidated|unqualified)\b'
+    # Require an explicit qualification subject and predicate. A generic open
+    # issue or a separate UI gate does not establish an acceptance caveat.
+    boundary = (r'\b(?:acceptance|qualification|verification|validation|usefulness)\s+'
+                r'(?:(?:remains?|is|are)\s+(?:still\s+)?(?:open|pending)\b|'
+                r'(?:is|are)\s+(?:a\s+)?separate\s+gates?\b)')
+    return bool(re.search(negated, text, re.I) or re.search(boundary, text, re.I))
 
 
 def classify(record):
@@ -70,7 +76,7 @@ def classify(record):
     explicit = heading_section(record)
     if explicit == 'objectives':
         return explicit, 'Source heading describes an objective or guiding policy; excerpt is not a verified state'
-    if qualification_caveat(record['statement']):
+    if not record.get('_skip_caveat') and qualification_caveat(record['statement']):
         return 'qualification', 'Source explicitly limits qualification or verification; no blocker, pass or acceptance is inferred'
     if record['evidence_status'] == 'proposal':
         return 'ideas', 'Source is labelled proposal or untested; adoption is unknown'
@@ -159,9 +165,19 @@ def preview_candidates(records):
             value = match.group().rstrip()
             if not narrative_lines({'statement': value}) or (caveat and not qualification_caveat(value)):
                 continue
+            offset = match.start()
+            # A long paragraph can report successful checks before naming the
+            # outstanding gate. Show the exact caveat sentence if the prefix
+            # would hide it, retaining offsets into the full canonical record.
+            if caveat and not qualification_caveat(value[:400]):
+                for sentence in re.finditer(r'\S.*?(?:(?<=[.!?])(?=\s)|\Z)', value, re.S):
+                    if qualification_caveat(sentence.group()):
+                        offset += sentence.start()
+                        value = sentence.group()
+                        break
             opening = re.match(r'^\*\*([^*\n]+)\*\*', value)
             candidate = dict(record, statement=value,
-                _excerpt_start=match.start(), _record_chars=len(text),
+                _excerpt_start=offset, _record_chars=len(text),
                 _heading_section=heading_section(record),
                 _emphasis=bool(opening and not opening.group(1).endswith(':')))
             paragraphs.append(candidate)
@@ -223,10 +239,19 @@ def build_briefing(name, current, previous=None, limit=3):
         key, reason = classification
         candidates[key].append(record)
         reasons[record['id']] = reason
+        if key == 'qualification':
+            # A caveat supplements, rather than replaces, the record's ordinary
+            # context (such as the product introduction or reported outcomes).
+            ordinary = dict(record, _skip_caveat=True)
+            secondary = classify(ordinary)
+            if secondary:
+                ordinary['_selection_reason'] = secondary[1]
+                candidates[secondary[0]].append(ordinary)
     for key, records in candidates.items():
         previews = preview_candidates(records)
         chosen = select_diverse(previews, limit)
-        sections[key]['items'] = [excerpt_item(r, current, reasons[r['id']]) for r in chosen]
+        sections[key]['items'] = [excerpt_item(r, current,
+            r.get('_selection_reason', reasons[r['id']])) for r in chosen]
         sections[key]['omitted'] = len(previews) - len(chosen)
     if previous is not None:
         retained_paths = {f['path'] for f in current['files'] if f['status'] in ('retained', 'duplicate')}

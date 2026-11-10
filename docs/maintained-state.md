@@ -90,3 +90,7 @@ writer format remains 4, and snapshot readers still materialize canonical schema
 After undo the journal stays version 2 because its audit history still contains the
 consolidation. Keep a compatible reader for that history; undo does not authorize
 rewriting the head back to version 1.
+
+## Explicit qualification caveats
+
+Briefings surface source statements that acceptance remains open or pending, or that qualification is a separate gate. These are quoted limits, not inferred failures or passes. When a long paragraph hides the limit beyond its preview, the exact caveat sentence is shown with offsets into the unchanged retained record. Ordinary product context remains available alongside the caveat. Open full evidence for surrounding context; phrase selection does not establish semantic accuracy or human acceptance.
