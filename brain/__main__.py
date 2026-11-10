@@ -16,6 +16,14 @@ def main(argv=None):
     sub.add_parser('storage-preview', help='Preview lossless evidence compaction and current storage')
     p = sub.add_parser('compact-copy', help='Create a verified compact store without changing the original')
     p.add_argument('destination')
+    p = sub.add_parser('model-input', help='Export bounded evidence for local model evaluation')
+    p.add_argument('project_id')
+    p.add_argument('--max-records', type=int, default=24)
+    p.add_argument('--max-chars', type=int, default=24000)
+    p = sub.add_parser('model-check', help='Validate offline local-model proposals without changing state')
+    p.add_argument('input_file')
+    p.add_argument('response_file')
+    p.add_argument('identity_file')
     sub.add_parser('sources', help='List explicitly configured sources')
     sub.add_parser('refresh-once', help='Run one bounded due-source refresh pass')
     sub.add_parser('refresh-status', help='Show automatic capture policy and health')
@@ -176,6 +184,20 @@ def main(argv=None):
             elif args.command in ('storage-preview', 'compact-copy'):
                 from .storage import preview, compact_copy
                 result = preview(b) if args.command == 'storage-preview' else compact_copy(b, args.destination)
+            elif args.command == 'model-input':
+                from .interpretation import build_input
+                result = build_input(b, args.project_id, max_records=args.max_records, max_chars=args.max_chars)
+            elif args.command == 'model-check':
+                from .interpretation import validate_proposals
+                def bounded_file(path, limit):
+                    with open(path, 'rb') as stream:
+                        value = stream.read(limit + 1)
+                    if len(value) > limit:
+                        raise ValueError('Model evaluation file exceeds byte budget')
+                    return value.decode('utf-8')
+                result = validate_proposals(b, json.loads(bounded_file(args.input_file, 2000000)),
+                    bounded_file(args.response_file, 65536),
+                    model_identity=json.loads(bounded_file(args.identity_file, 8000)))
             elif args.command == 'refresh':
                 result = b.refresh(args.source_id)
             elif args.command == 'relocate-source':

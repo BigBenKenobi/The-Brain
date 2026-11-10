@@ -181,3 +181,7 @@ ideas, attempts and blockers with evidence-backed correction, relationships and 
 [Evidence storage and compaction](docs/storage-compaction.md) covers writer4,
 copy-only migration, derived-state integrity checks and rollback. Explicit support
 consolidation and its undo are described in [maintained state](docs/maintained-state.md).
+
+The [offline model boundary](docs/local-model-evaluation.md) exports bounded
+project evidence and validates externally supplied proposals. It does not invoke a
+model, establish runtime identity, or promote suggestions into reviewed state.
