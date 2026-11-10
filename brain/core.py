@@ -12,6 +12,7 @@ import uuid
 import zipfile
 
 VERSION = 1
+STORE_VERSION = 2
 EXTRACTOR = 'deterministic-3'
 EXCLUDED = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', 'dist', 'build', '.cache', '.pytest_cache', 'target'}
 TEXT = {'.md', '.rst', '.txt', '.py', '.js', '.ts', '.tsx', '.jsx', '.json', '.toml', '.yaml', '.yml', '.ini', '.cfg', '.rs', '.go', '.java', '.c', '.h', '.cpp', '.cs', '.sh', '.sql', '.conf', '.config', '.service', '.timer', '.target', '.desktop', '.rules', '.container', '.widget', '.menu', '.theme', '.dirs', '.list', '.log', '.stderr', '.patch', '.xml', '.ui', '.css', '.html', '.swift', '.plist', '.xcprivacy', '.pbxproj', '.xcscheme', '.sha256', '.tsv'}
@@ -41,23 +42,27 @@ def write(path, value):
 def tokens(text):
     return set(re.findall(r'[a-z0-9][a-z0-9+#.-]*', text.lower())) - STOP
 
+def match_tokens(text):
+    # Retrieval-only normalisation preserves immutable legacy search indexes.
+    return {token.rstrip('.') for token in tokens(text)}
+
 def initialize(root):
     root = Path(root).resolve()
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     if not (root / 'config.json').exists():
-        write(root / 'config.json', {'schema_version': VERSION, 'max_files': 10000, 'max_file_bytes': 262144, 'max_total_bytes': 16777216, 'max_seconds': 60, 'review_days': 365, 'ai': {'provider': None, 'model': None, 'enabled': False}})
+        write(root / 'config.json', {'schema_version': STORE_VERSION, 'max_files': 10000, 'max_file_bytes': 262144, 'max_total_bytes': 16777216, 'max_seconds': 60, 'review_days': 365, 'ai': {'provider': None, 'model': None, 'enabled': False}})
     if not (root / 'registry.json').exists():
         write(root / 'registry.json', {'schema_version': VERSION, 'projects': {}})
     for name in ('projects', 'shared', 'archives'):
         (root / name).mkdir(exist_ok=True)
-    return {'brain': str(root), 'schema_version': VERSION}
+    return {'brain': str(root), 'schema_version': read(root / 'config.json')['schema_version']}
 
 class Brain:
     def __init__(self, root):
         self.root = Path(root).resolve()
         self.config = read(self.root / 'config.json')
         self.registry_path = self.root / 'registry.json'
-        if self.config.get('schema_version') != VERSION:
+        if self.config.get('schema_version') not in (1, STORE_VERSION):
             raise ValueError('Unsupported configuration version')
         for key in ('max_files', 'max_file_bytes', 'max_total_bytes', 'max_seconds', 'review_days'):
             if type(self.config.get(key)) is not int or self.config[key] <= 0:
@@ -66,11 +71,13 @@ class Brain:
             raise ValueError('AI execution is unavailable; ai.enabled must remain false')
 
     @contextlib.contextmanager
-    def lock(self):
+    def lock(self, writable=True):
         # Advisory flock is automatically released on process failure; no stale locks.
         import fcntl
         with (self.root / '.lock').open('a') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
+            if writable and read(self.root / 'config.json').get('schema_version') != STORE_VERSION:
+                raise ValueError('Legacy store is read-only; run upgrade-store with a backup destination first')
             yield
 
     def project(self, project_id):
@@ -78,6 +85,73 @@ class Brain:
         if project_id not in registry['projects']:
             raise ValueError('Unknown project ID')
         return registry['projects'][project_id]
+
+    def upgrade_store(self, backup):
+        """Guard older writers only after creating a coherent code/store backup."""
+        import shutil
+        backup = Path(backup).resolve()
+        if backup == self.root or self.root in backup.parents or backup in self.root.parents:
+            raise ValueError('Backup must be outside the store')
+        with self.lock(writable=False):
+            config = read(self.root / 'config.json')
+            if config['schema_version'] == STORE_VERSION:
+                return {'changed': False, 'schema_version': STORE_VERSION}
+            backup.mkdir(parents=True, exist_ok=False, mode=0o700)
+            shutil.copytree(self.root, backup / 'store')
+            shutil.copytree(Path(__file__).parent, backup / 'code' / 'brain',
+                            ignore=shutil.ignore_patterns('__pycache__'))
+            hashes = {}
+            for path in (backup / 'store').rglob('*'):
+                if path.is_file() and path.name != '.lock':
+                    relative = str(path.relative_to(backup / 'store'))
+                    hashes[relative] = digest(path.read_bytes())
+                    if hashes[relative] != digest((self.root / relative).read_bytes()):
+                        raise ValueError('Backup copy verification failed')
+            count = 0
+            for path in (backup / 'store' / 'projects').glob('*/snapshots/*.json'):
+                validate(read(path))
+                count += 1
+            write(backup / 'rollback.json', {'store': str(self.root), 'schema_version': config['schema_version'],
+                'snapshots_validated': count, 'store_file_sha256': hashes,
+                'instruction': 'Stop all Brain writers; restore store/ and use code/ together. Historical snapshots were not rewritten.'})
+            config['schema_version'] = STORE_VERSION
+            write(self.root / 'config.json', config)
+            self.config = config
+            return {'changed': True, 'schema_version': STORE_VERSION, 'backup': str(backup), 'snapshots_validated': count}
+
+    def configure_source(self, source_id, *, excluded_paths=None, historical=None,
+                         budgets=None, enabled=None, new_location=None):
+        from .sources import configuration, location
+        with self.lock():
+            registry = read(self.registry_path)
+            sources = registry.get('sources', {})
+            if source_id not in sources:
+                raise ValueError('Unknown source ID')
+            source = sources[source_id]
+            config = configuration(self.config, source['configuration'], excluded_paths=excluded_paths,
+                historical=historical, budgets=budgets, enabled=enabled)
+            if new_location is not None:
+                path = str(location(self.root, new_location))
+                if any(s['id'] != source_id and s['location'] == path for s in sources.values()):
+                    raise ValueError('Location already registered')
+                if path != source['location']:
+                    config['revision'] += 1
+                    source['location'] = path
+                    project = registry['projects'][source['project_id']]
+                    if path not in project['locations']:
+                        project['locations'].append(path)
+            source['configuration'] = config
+            write(self.registry_path, registry)
+            return source
+
+    def refresh(self, source_id, *, automatic=False):
+        registry = read(self.registry_path)
+        source = registry.get('sources', {}).get(source_id)
+        if source is None:
+            raise ValueError('Unknown source ID')
+        if automatic and not source['configuration']['enabled']:
+            raise ValueError('Source is disabled for automatic capture')
+        return self.ingest(source['location'], source_id=source_id, automatic=automatic)
 
     def snapshot(self, project_id, snapshot_id=None):
         project = self.project(project_id)
@@ -113,6 +187,13 @@ class Brain:
                     entry['duplicate_of'] = prefix + entry['duplicate_of']
                 entry['consolidated_from'] = {'project_id': origin, 'snapshot': sid, 'path': original_path}
                 snapshot['files'].append(entry)
+            relations = snapshot.setdefault('relations', [])
+            for edge in source.get('relations', []):
+                mapped = dict(edge)
+                for key in ('older', 'replacement'):
+                    mapped[key] = digest(f"{snapshot['project_id']}:{origin}:{edge[key]}".encode())
+                if mapped not in relations:
+                    relations.append(mapped)
             snapshot['evidence'].update(source['evidence'])
             for original in source['records']:
                 record = dict(original)
@@ -159,25 +240,70 @@ class Brain:
             return {'project_id': project_id, 'snapshot': target['id'], 'changed': True,
                     'records': len(target['records']), 'consolidation': target['consolidation']}
 
-    def ingest(self, source, project_id=None, excluded_paths=(), historical=False):
-        source = Path(source).resolve(strict=True)
-        if not source.is_dir():
-            raise ValueError('Source must be a directory')
-        if source == self.root or self.root in source.parents or source in self.root.parents:
-            raise ValueError('Brain and source directories must not overlap')
-        excluded_paths = {str(Path(p)) for p in excluded_paths}
-        if any(Path(p).is_absolute() or '..' in Path(p).parts or p == '.' for p in excluded_paths):
-            raise ValueError('Exclusions must be relative subpaths')
+    def ingest(self, source, project_id=None, excluded_paths=None, historical=None, **options):
+        attempted_at = time.time()
+        try:
+            return self._ingest(source, project_id, excluded_paths, historical, **options)
+        except OSError as error:
+            registry = read(self.registry_path)
+            sid = options.get('source_id')
+            path = str(Path(source).resolve())
+            if sid is None:
+                matches = [s['id'] for s in registry.get('sources', {}).values()
+                           if s['location'] == path and (project_id is None or s['project_id'] == project_id)]
+                sid = matches[0] if len(matches) == 1 else None
+            if sid in registry.get('sources', {}):
+                with self.lock():
+                    write(self.root / 'health' / (sid + '.json'), {
+                        'source_id': sid, 'attempted_at': attempted_at,
+                        'finished_at': time.time(), 'state': 'failed', 'error': type(error).__name__})
+            raise
+
+    def _ingest(self, source, project_id=None, excluded_paths=None, historical=None,
+               *, source_id=None, budgets=None, new_source=False, adopt_legacy=False, automatic=False):
+        from .sources import BUDGETS, location, resolve
+        # Resolution and publication share one writer lock. No half-saved settings.
+        source = location(self.root, source)
+        explicit_project = project_id is not None
         with self.lock():
             registry = read(self.registry_path)
             projects = registry['projects']
+            if source_id:
+                configured = registry.get('sources', {}).get(source_id)
+                if not configured:
+                    raise ValueError('Unknown source ID')
+                if project_id and project_id != configured['project_id']:
+                    raise ValueError('Source belongs to another project')
+                project_id = configured['project_id']
             if project_id:
                 if project_id not in projects:
                     raise ValueError('Unknown project ID')
             else:
-                project_id = next((p for p, v in projects.items() if str(source) in v['locations']), None)
+                matches = [p for p, v in projects.items() if str(source) in v['locations']]
+                if len(matches) > 1:
+                    raise ValueError('Ambiguous project location; supply project ID')
+                project_id = matches[0] if matches else None
             project_id = project_id or str(uuid.uuid4())
             old = self.snapshot(project_id) if project_id in projects and projects[project_id].get('snapshot') else {'files': [], 'records': [], 'extractor': None}
+            # Preserve the callable API's existing in-memory budget overrides.
+            disk_defaults = read(self.root / 'config.json')
+            overrides = {k: self.config[k] for k in BUDGETS if self.config[k] != disk_defaults[k]}
+            overrides.update(budgets or {})
+            configured = resolve(registry, self.config, source, project_id, old,
+                source_id=source_id, new_source=new_source, adopt_legacy=adopt_legacy,
+                excluded_paths=excluded_paths, historical=historical, budgets=overrides or None,
+                allow_relocation=explicit_project)
+            if automatic and not configured['configuration']['enabled']:
+                raise ValueError('Source is disabled for automatic capture')
+            source_id = configured['id']
+            effective = configured['configuration']
+            excluded_paths = set(effective['excluded_paths'])
+            historical = effective['historical']
+            limits = effective['budgets']
+            prefix = configured['prefix']
+            old_effective = old.get('source_configurations', {}).get(source_id, {})
+            previous_historical = old_effective.get('configuration', {}).get('historical', old.get('historical', False))
+            attempted_at = time.time()
             oldfiles = {f['path']: f for f in old['files']}
             oldrecords = {}
             for r in old['records']:
@@ -187,7 +313,7 @@ class Brain:
             metrics = {'files_seen': 0, 'bytes_read': 0, 'extractions': 0, 'cache_hits': 0, 'model_calls': 0}
             coverage = []
             def walk_error(error):
-                coverage.append({'reason': 'inaccessible_directory', 'path': os.path.relpath(error.filename, source)})
+                coverage.append({'reason': 'inaccessible_directory', 'path': prefix + os.path.relpath(error.filename, source), 'source_id': source_id})
             halted = False
             for directory, dirs, names in os.walk(source, followlinks=False, onerror=walk_error):
                 dirs.sort()
@@ -195,16 +321,17 @@ class Brain:
                 for d in dirs[:]:
                     p = Path(directory) / d
                     if d in EXCLUDED or p.is_symlink() or p.resolve() == self.root or str(p.relative_to(source)) in excluded_paths:
-                        files.append({'path': str(p.relative_to(source)), 'status': 'excluded_directory', 'reason': 'explicit scoped exclusion; subtree not inspected' if str(p.relative_to(source)) in excluded_paths else 'dependency/cache/history or symlink; subtree not inspected'})
+                        files.append({'path': prefix + str(p.relative_to(source)), 'source_id': source_id, 'status': 'excluded_directory', 'reason': 'explicit scoped exclusion; subtree not inspected' if str(p.relative_to(source)) in excluded_paths else 'dependency/cache/history or symlink; subtree not inspected'})
                         dirs.remove(d)
                 for name in names:
-                    if metrics['files_seen'] >= self.config['max_files'] or time.monotonic() - start > self.config['max_seconds']:
-                        coverage.append({'reason': 'inventory_budget_exhausted', 'path': str(Path(directory).relative_to(source)), 'detail': 'Remaining tree not inventoried'})
+                    if metrics['files_seen'] >= limits['max_files'] or time.monotonic() - start > limits['max_seconds']:
+                        coverage.append({'reason': 'inventory_budget_exhausted', 'path': prefix + str(Path(directory).relative_to(source)), 'source_id': source_id, 'detail': 'Remaining tree not inventoried'})
                         halted = True
                         break
                     p = Path(directory) / name
-                    rel = str(p.relative_to(source))
-                    entry = {'path': rel}
+                    local_rel = str(p.relative_to(source))
+                    rel = prefix + local_rel
+                    entry = {'path': rel, 'source_id': source_id}
                     files.append(entry)
                     metrics['files_seen'] += 1
                     try:
@@ -213,7 +340,7 @@ class Brain:
                             entry.update(status='excluded', reason='symlink or special file')
                             continue
                         entry['size'] = info.st_size
-                        if rel in excluded_paths:
+                        if local_rel in excluded_paths:
                             entry.update(status='excluded', reason='explicit scoped exclusion')
                             continue
                         if name.startswith('.env') or p.suffix.lower() in {'.pem', '.key', '.p12', '.pfx'} or re.search(r'credential|secret|id_rsa|id_ed25519|(?:^|[._-])(?:auth|cookies?|tokens?)(?:[._-]|$)', name, re.I):
@@ -222,7 +349,7 @@ class Brain:
                         if p.suffix.lower() not in TEXT and p.suffix and name not in {'Dockerfile', 'Makefile', 'LICENSE'}:
                             entry.update(status='unsupported', reason='format not interpreted or retained')
                             continue
-                        if info.st_size > self.config['max_file_bytes'] or metrics['bytes_read'] + info.st_size > self.config['max_total_bytes']:
+                        if info.st_size > limits['max_file_bytes'] or metrics['bytes_read'] + info.st_size > limits['max_total_bytes']:
                             entry.update(status='unprocessed', reason='byte budget')
                             continue
                         # O_NOFOLLOW prevents a final-component symlink swap.
@@ -231,12 +358,12 @@ class Brain:
                             before = os.fstat(handle.fileno())
                             if not stat.S_ISREG(before.st_mode):
                                 raise OSError('Not a regular file')
-                            data = handle.read(int(self.config['max_file_bytes']) + 1)
+                            data = handle.read(int(limits['max_file_bytes']) + 1)
                             after = os.fstat(handle.fileno())
-                        if len(data) > self.config['max_file_bytes'] or (before.st_mtime_ns, before.st_size, before.st_ino) != (after.st_mtime_ns, after.st_size, after.st_ino) or (info.st_ino, info.st_mtime_ns) != (after.st_ino, after.st_mtime_ns):
+                        if len(data) > limits['max_file_bytes'] or (before.st_mtime_ns, before.st_size, before.st_ino) != (after.st_mtime_ns, after.st_size, after.st_ino) or (info.st_ino, info.st_mtime_ns) != (after.st_ino, after.st_mtime_ns):
                             entry.update(status='unprocessed', reason='source changed during read or exceeded budget')
                             continue
-                        if metrics['bytes_read'] + len(data) > self.config['max_total_bytes']:
+                        if metrics['bytes_read'] + len(data) > limits['max_total_bytes']:
                             entry.update(status='unprocessed', reason='total byte budget')
                             continue
                         metrics['bytes_read'] += len(data)
@@ -250,14 +377,18 @@ class Brain:
                             entry.update(status='unsupported', reason='extensionless file without recognized text role or shebang')
                             continue
                         sha = digest(data)
-                        entry.update(sha256=sha, status='retained')
+                        entry.update(sha256=sha, status='retained', observed_at=time.time(), configuration_revision=effective['revision'])
                         evidence[sha] = text
                         if sha in seen:
                             entry.update(status='duplicate', duplicate_of=seen[sha])
                             continue
                         seen[sha] = rel
-                        # Duplicate inventory entries have no completed extraction to reuse.
-                        if old.get('extractor') == EXTRACTOR and old.get('historical', False) == historical and oldfiles.get(rel, {}).get('status') == 'retained' and oldfiles.get(rel, {}).get('sha256') == sha:
+                        # Duplicate inventory entries never completed extraction.
+                        # Retained empty files did, and may legitimately cache [].
+                        if (old.get('extractor') == EXTRACTOR
+                                and previous_historical == historical
+                                and oldfiles.get(rel, {}).get('status') == 'retained'
+                                and oldfiles.get(rel, {}).get('sha256') == sha):
                             extracted = oldrecords.get(rel, [])
                             metrics['cache_hits'] += 1
                         else:
@@ -271,10 +402,34 @@ class Brain:
                 if halted:
                     break
             metrics['elapsed_seconds'] = round(time.monotonic() - start, 6)
+            if not files and any(w['reason'] == 'inaccessible_directory' for w in coverage):
+                raise OSError('Source inventory unavailable; previous snapshot preserved')
             sid = str(uuid.uuid4())
             snap = {'schema_version': VERSION, 'id': sid, 'project_id': project_id, 'created_at': time.time(), 'extractor': EXTRACTOR, 'historical': historical, 'excluded_paths': sorted(excluded_paths), 'files': files, 'records': records, 'coverage_warnings': coverage, 'metrics': metrics, 'ai': {'available': False, 'reason': 'No model execution adapter configured; lexically prioritized excerpts only'}, 'evidence': evidence}
+            other_files = [f for f in old['files'] if f.get('source_id') not in (None, source_id) and not f.get('consolidated_from')]
+            other_paths = {f['path'] for f in other_files}
+            if other_paths & {f['path'] for f in files}:
+                raise ValueError('Source evidence namespace collision')
+            snap['files'].extend(other_files)
+            snap['records'].extend(r for r in old['records'] if r['evidence']['path'] in other_paths)
+            for f in other_files:
+                if f.get('sha256') in old.get('evidence', {}):
+                    snap['evidence'][f['sha256']] = old['evidence'][f['sha256']]
+            snap['source_configurations'] = dict(old.get('source_configurations', {}))
+            snap['source_configurations'][source_id] = configured
+            # Per-source state is authoritative for mixed historical/current captures.
+            snap['historical'] = all(c['configuration']['historical'] for c in snap['source_configurations'].values())
+            partial = bool(coverage) or any(f['status'] in ('inaccessible', 'unprocessed') for f in files if f.get('source_id') == source_id)
+            snap['capture'] = {'source_id': source_id, 'attempted_at': attempted_at,
+                               'finished_at': time.time(), 'state': 'partial' if partial else 'complete'}
+            snap['source_health'] = dict(old.get('source_health', {}))
+            snap['source_health'][source_id] = dict(snap['capture'],
+                last_complete_at=(old.get('source_health', {}).get(source_id, {}).get('last_complete_at') if partial else snap['capture']['finished_at']))
+            snap['coverage_warnings'].extend(w for w in old.get('coverage_warnings', [])
+                if w.get('source_id') not in (None, source_id) and not w.get('consolidated_from'))
+            snap['relations'] = old.get('relations', [])
             snap['parent_snapshot'] = old.get('id')
-            snap['processing_budgets'] = {k: self.config[k] for k in ('max_files', 'max_file_bytes', 'max_total_bytes', 'max_seconds')}
+            snap['processing_budgets'] = dict(limits)
             snap['search_index'] = {r['id']: sorted(tokens(r['statement'])) for r in records}
             paths = {f['path'] for f in files}
             snap['project_types'] = [kind for filename, kind in [('pyproject.toml', 'Python'), ('requirements.txt', 'Python'), ('package.json', 'JavaScript/TypeScript'), ('Cargo.toml', 'Rust'), ('go.mod', 'Go'), ('project.godot', 'Godot')] if filename in paths]
@@ -288,8 +443,9 @@ class Brain:
             if str(source) not in project['locations']:
                 project['locations'].append(str(source))
             project['snapshot'] = sid
+            registry.setdefault('sources', {})[source_id] = configured
             write(self.registry_path, registry)
-            return {'project_id': project_id, 'snapshot': sid, 'metrics': metrics, 'records': len(snap['records']), 'report': self.retirement(project_id)}
+            return {'project_id': project_id, 'source_id': source_id, 'snapshot': sid, 'metrics': metrics, 'records': len(snap['records']), 'report': self.retirement(project_id)}
 
     def retained_evidence(self, project_id, path, start_line=1, end_line=None, snapshot_id=None):
         """Read only the published snapshot; never reopen the original source."""
@@ -376,42 +532,117 @@ class Brain:
             write(self.root / 'shared' / (record_id + '.json'), approval)
             return approval
 
-    def retrieve(self, query, project_id=None, technologies=(), limit=5, max_chars=6000, blocked=()):
+    def relate(self, project_id, older, replacement, kind, rationale):
+        """Explicit reviewed precedence, published atomically without changing evidence."""
+        if kind not in {'corrects', 'supersedes', 'duplicates'} or not rationale.strip():
+            raise ValueError('A supported relationship and rationale are required')
+        if SECRET.search(rationale):
+            raise ValueError('Suspected sensitive content')
+        with self.lock():
+            registry = read(self.registry_path)
+            s = self.snapshot(project_id)
+            ids = {r['id'] for r in s['records']}
+            if older not in ids or replacement not in ids:
+                raise ValueError('Both records must exist in the same project snapshot')
+            edges = s.setdefault('relations', [])
+            edge = {'older': older, 'replacement': replacement, 'kind': kind, 'rationale': rationale}
+            if edge in edges:
+                return {'changed': False, 'snapshot': s['id']}
+            edges.append(edge)
+            validate(s)
+            s['parent_snapshot'] = s['id']
+            s['id'] = str(uuid.uuid4())
+            s['created_at'] = time.time()
+            write(self.root / 'projects' / project_id / 'snapshots' / (s['id'] + '.json'), s)
+            registry['projects'][project_id]['snapshot'] = s['id']
+            write(self.registry_path, registry)
+            return {'changed': True, 'snapshot': s['id'], 'relation': edge}
+
+    def retrieve(self, query, project_id=None, technologies=(), limit=5, max_chars=6000,
+                 blocked=(), history=False, explain=False, max_age_days=None):
+        if limit < 1 or max_chars < 1:
+            raise ValueError('Retrieval budgets must be positive')
+        if max_age_days is not None and (type(max_age_days) is not int or max_age_days < 0):
+            raise ValueError('Observation age must be a nonnegative integer')
         if project_id:
             self.project(project_id)
-        q = tokens(query)
-        if not q:
-            return []
+        q = match_tokens(query)
         target = set(t.lower() for t in technologies)
-        found = []
+        found, omissions = {}, []
         for origin in read(self.registry_path)['projects']:
             s = self.snapshot(origin)
+            validate(s)
+            edges = {e['older']: e for e in s.get('relations', [])}
+            replacements = {e['replacement'] for e in edges.values()}
+            allowed = {}
+            own = origin == project_id
             for r in s['records']:
-                own = origin == project_id
-                approval_path = self.root / 'shared' / (r['id'] + '.json')
                 if not own:
-                    if not approval_path.exists():
+                    path = self.root / 'shared' / (r['id'] + '.json')
+                    if not path.exists():
                         continue
-                    a = read(approval_path)
+                    a = read(path)
                     if a['permission'] != 'shared' or a['review_after'] < time.time() or a['evidence_sha256'] != r['evidence']['sha256'] or not set(a['technologies']).issubset(target):
                         continue
-                if time.time() - r['created_at'] > self.config['review_days'] * 86400:
+                rt = match_tokens(r['statement'])
+                observation = next((f.get('observed_at') for f in s['files']
+                    if f['path'] == r['evidence']['path'] and f.get('sha256') == r['evidence']['sha256']), None)
+                fresh_enough = max_age_days is None or (observation is not None and time.time() - observation <= max_age_days * 86400)
+                if fresh_enough and not any(match_tokens(b) & rt for b in blocked):
+                    allowed[r['id']] = r
+            for rid, r in allowed.items():
+                overlap = q & match_tokens(r['statement'])
+                if not q or len(overlap) < min(2, len(q)) or len(overlap) / len(q) < .5:
                     continue
-                rt = set(s.get('search_index', {}).get(r['id'], tokens(r['statement'])))
-                overlap = q & rt
-                if len(overlap) < min(2, len(q)) or len(overlap) / len(q) < .5 or any(tokens(b) & rt for b in blocked):
-                    continue
-                score = len(overlap) / len(q)
-                item = dict(r)
-                item.update(score=score, why=f"Task terms match: {', '.join(sorted(overlap))}; " + ('same project' if own else 'explicit sharing approval and declared technology compatibility'), precedence='Current project requirements override this historical evidence; resolve conflicts before use.')
-                found.append(item)
-        found.sort(key=lambda r: (-r['score'], r['id']))
+                chain, resolved = [], rid
+                if not history:
+                    while resolved in edges:
+                        chain.append(edges[resolved])
+                        resolved = edges[resolved]['replacement']
+                    if resolved not in allowed:
+                        # Never fall back to an obsolete claim if its correction is unavailable.
+                        omissions.append({'record_id': rid, 'reason': 'replacement unavailable, excluded, expired or unapproved'})
+                        continue
+                item = dict(allowed[resolved])
+                observed = next((f.get('observed_at') for f in s['files']
+                    if f['path'] == item['evidence']['path'] and f.get('sha256') == item['evidence']['sha256']), None)
+                item['observation'] = {'observed_at': observed, 'status': 'unknown' if observed is None else 'observed',
+                                       'extracted_at': item['created_at'], 'claim_review': 'not established by capture'}
+                item.update(score=len(overlap) / len(q), why='same project' if own else 'explicit sharing approval',
+                            precedence='Reviewed explicit relationships applied; verify changeable claims.',
+                            retrieval_state='historical' if history and rid in edges else 'current candidate')
+                item['reviewed_replacement'] = resolved in replacements
+                if chain:
+                    item['resolved_from'] = rid
+                    # Do not expose private intermediate records or rationales through sharing.
+                    item['resolution'] = chain if own else 'approved replacement of historical match'
+                if history and own and rid in edges:
+                    item['outgoing_relation'] = edges[rid]
+                previous = found.get(resolved)
+                if previous is None or (bool(chain), item['score']) > (bool(previous.get('resolved_from')), previous['score']):
+                    found[resolved] = item
+        def substantive(r):
+            lines = [line.strip() for line in r['statement'].splitlines() if line.strip()]
+            return any(not line.startswith(('#', '|')) and not re.match(r'^(Project root|Project|Capture date|Capture chat|Date|Task/chat|Task|Chat|Sources?|Evidence status):', line) for line in lines)
+        ranked = sorted(found.values(), key=lambda r: (-bool(r.get('reviewed_replacement')), -bool(r.get('resolved_from')), -substantive(r), -r['score'], r['id']))
         result, size = [], 0
-        for r in found:
-            cost = len(json.dumps(r))
-            if size + cost <= max_chars and len(result) < limit:
+        seen = set()
+        for r in ranked:
+            fingerprint = ' '.join(r['statement'].split())
+            cost = len(r['statement'])
+            reason = ('duplicate statement' if fingerprint in seen else 'limit' if len(result) >= limit else
+                      'text budget' if size + cost > max_chars else None)
+            if reason:
+                omissions.append({'record_id': r['id'], 'reason': reason})
+            else:
                 result.append(r)
                 size += cost
+                seen.add(fingerprint)
+        if explain:
+            return {'results': result, 'omitted': omissions, 'text_chars': size,
+                    'budget_scope': 'statement text; provenance metadata additional',
+                    'mode': 'history' if history else 'current',
+                    'limits': 'Explicit reviewed links only; no semantic completeness or truth guarantee.'}
         return result
 
     def summary(self, project_id):
@@ -430,7 +661,27 @@ class Brain:
         previous = self.snapshot(project_id, parent) if parent else None
         if previous is not None:
             validate(previous)
-        return build_briefing(self.project(project_id)['name'], current, previous, limit)
+        briefing = build_briefing(self.project(project_id)['name'], current, previous, limit)
+        health = []
+        for sid, configured in read(self.registry_path).get('sources', {}).items():
+            if configured['project_id'] != project_id:
+                continue
+            captured = current.get('source_health', {}).get(sid, {})
+            attempt = captured
+            health_path = self.root / 'health' / (sid + '.json')
+            if health_path.exists():
+                failed = read(health_path)
+                if failed.get('attempted_at', 0) > captured.get('attempted_at', 0):
+                    attempt = failed
+            effective = current.get('source_configurations', {}).get(sid, {}).get('configuration', {})
+            health.append({'source_id': sid, 'state': attempt.get('state', 'unknown'),
+                           'last_attempt_at': attempt.get('attempted_at'),
+                           'last_complete_at': captured.get('last_complete_at'),
+                           'enabled': configured['configuration']['enabled'],
+                           'configured_revision': configured['configuration']['revision'],
+                           'captured_revision': effective.get('revision')})
+        briefing['source_health'] = health
+        return briefing
 
     def archive(self, project_id):
         # Evidence export, explicitly never classified as a recoverable source archive.
@@ -525,6 +776,24 @@ def validate(s):
         if key not in s:
             raise ValueError('Missing snapshot field: ' + key)
     ids = set()
+    from .sources import validate_source
+    for sid, configured in s.get('source_configurations', {}).items():
+        validate_source(configured)
+        if configured['id'] != sid or configured['project_id'] != s['project_id']:
+            raise ValueError('Source configuration identity mismatch')
+    paths = set()
+    for entry in s['files']:
+        if entry['path'] in paths:
+            raise ValueError('Duplicate evidence path')
+        paths.add(entry['path'])
+        if 'observed_at' in entry:
+            import math
+            observed = entry['observed_at']
+            if (type(observed) not in (int, float) or not math.isfinite(observed) or observed < 0
+                    or entry['status'] not in ('retained', 'duplicate') or 'sha256' not in entry):
+                raise ValueError('Invalid successful observation')
+        if 'configuration_revision' in entry and (type(entry['configuration_revision']) is not int or entry['configuration_revision'] < 1):
+            raise ValueError('Invalid source configuration revision')
     for sha, text in s['evidence'].items():
         if digest(text.encode()) != sha or SECRET.search(text):
             raise ValueError('Evidence integrity or sensitivity failure')
@@ -551,5 +820,23 @@ def validate(s):
             raise ValueError('Statement is not backed by retained evidence')
     if 'search_index' in s and s['search_index'] != {r['id']: sorted(tokens(r['statement'])) for r in s['records']}:
         raise ValueError('Search index disagrees with canonical records')
-    return {'valid': True, 'records': len(ids)}
-
+    edges = {}
+    for edge in s.get('relations', []):
+        if edge.get('kind') not in {'corrects', 'supersedes', 'duplicates'} or not edge.get('rationale', '').strip():
+            raise ValueError('Invalid relationship')
+        for key in ('older', 'replacement'):
+            if not re.fullmatch(r'[0-9a-f]{64}', edge.get(key, '')):
+                raise ValueError('Invalid relationship record ID')
+        if edge['older'] in edges:
+            raise ValueError('Ambiguous replacement; extend the existing correction chain instead')
+        edges[edge['older']] = edge['replacement']
+    for start in edges:
+        visited, current = set(), start
+        while current in edges:
+            if current in visited:
+                raise ValueError('Cyclic correction relationship')
+            visited.add(current)
+            current = edges[current]
+    missing = sorted({rid for pair in edges.items() for rid in pair if rid not in ids})
+    return {'valid': True, 'records': len(ids), 'relationship_warnings':
+            [{'reason': 'relationship endpoint absent; obsolete matches remain suppressed', 'record_id': rid} for rid in missing]}

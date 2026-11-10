@@ -64,6 +64,18 @@
               "retained",
               "duplicate"
             ]
+          },
+          "source_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "observed_at": {
+            "type": "number",
+            "minimum": 0
+          },
+          "configuration_revision": {
+            "type": "integer",
+            "minimum": 1
           }
         }
       }
@@ -131,12 +143,24 @@
       }
     },
     "parent_snapshot": {
-      "description": "Previously published snapshot for this project; absent in legacy captures and null for first ingestion.",
       "type": [
         "string",
         "null"
       ],
-      "format": "uuid"
+      "format": "uuid",
+      "description": "Explicit published predecessor; absent or null for unknown legacy baseline."
+    },
+    "source_configurations": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "source.schema.json"
+      }
+    },
+    "source_health": {
+      "type": "object"
+    },
+    "capture": {
+      "type": "object"
     }
   }
 }

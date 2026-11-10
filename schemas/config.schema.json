@@ -13,7 +13,11 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "enum": [
+        1,
+        2
+      ],
+      "description": "Version 1 is readable; version 2 guards persistent source writers."
     },
     "max_files": {
       "type": "integer",

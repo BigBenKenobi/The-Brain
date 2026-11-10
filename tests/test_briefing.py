@@ -29,6 +29,60 @@ class BriefingTests(unittest.TestCase):
     def ingest(self, **kwargs):
         return self.brain.ingest(self.source, **kwargs)['project_id']
 
+    def test_late_explicit_history_beats_command_noise_and_code_strings(self):
+        self.put('a-guide.md', ('# Instructions\npython -m example decision\n\n' * 10))
+        self.put('z-history.md', '# Decision\nChoose pooling because connections are expensive.\n\n'
+                 '# Failed approach\nAttempt: reconnecting for each event exhausted descriptors.\n\n'
+                 '# Unfinished idea\nProposed batching remains untested.\n')
+        self.put('implementation.py', 'labels = ["proposal", "untested", "decision"]\n')
+        pid = self.ingest()
+        brief = self.brain.briefing(pid, limit=1)
+        self.assertIn('pooling', brief['sections']['decisions']['items'][0]['excerpt'])
+        self.assertIn('exhausted descriptors', brief['sections']['attempts']['items'][0]['excerpt'])
+        self.assertIn('batching', brief['sections']['ideas']['items'][0]['excerpt'])
+        self.assertEqual(brief['sections']['implementation']['items'][0]['evidence']['path'], 'implementation.py')
+
+    def test_missing_blocker_remains_cited_as_unavailable_not_resolved(self):
+        self.put('blocker.md', '# Known issue\nUnresolved kiln thermocouple drift.\n')
+        pid = self.ingest()
+        old = self.brain.snapshot(pid)
+        (self.source / 'blocker.md').unlink()
+        self.ingest()
+        item = self.brain.briefing(pid)['sections']['unavailable']['items'][0]
+        self.assertEqual(item['snapshot'], old['id'])
+        self.assertIn('thermocouple drift', item['excerpt'])
+        self.assertIn('resolution remain unknown', item['selection_reason'])
+        evidence = item['evidence']
+        self.assertIn(item['excerpt'], self.brain.retained_evidence(pid, evidence['path'],
+            evidence['start_line'], evidence['end_line'], item['snapshot'])['text'])
+
+    def test_punctuation_matching_preserves_canonical_indexes_and_constraints(self):
+        self.put('decision.md', '# Decision\nUse thermal drift measurements for Python 3.14.\n')
+        pid = self.ingest()
+        before = self.brain.snapshot(pid)
+        self.assertTrue(self.brain.retrieve('Python 3.14', pid))
+        self.assertEqual(self.brain.retrieve('Python 3.14', pid, blocked=['measurements.']), [])
+        self.assertEqual(self.brain.snapshot(pid), before)
+
+    def test_corrections_suppress_obsolete_excerpts_and_preserve_baselines(self):
+        self.put('old.md', 'Decision: retry SQLite locking forever.\n')
+        self.put('new.md', 'Decision: use bounded retry for SQLite locking.\n')
+        pid = self.ingest()
+        first = self.brain.snapshot(pid)
+        ids = {r['evidence']['path']: r['id'] for r in first['records']}
+        self.brain.relate(pid, ids['old.md'], ids['new.md'], 'corrects', 'Bound retries')
+        briefing = self.brain.briefing(pid)
+        self.assertEqual(briefing['changes']['baseline_snapshot'], first['id'])
+        self.assertEqual(briefing['corrections']['suppressed_obsolete_records'], 1)
+        self.assertNotIn('retry SQLite locking forever', json.dumps(briefing))
+        self.assertIn('bounded retry', json.dumps(briefing))
+        (self.source / 'new.md').unlink()
+        self.ingest()
+        briefing = self.brain.briefing(pid)
+        self.assertNotIn('retry SQLite locking forever', json.dumps(briefing))
+        self.assertEqual(briefing['corrections']['suppressed_obsolete_records'], 1)
+        self.assertEqual(self.brain.snapshot(pid, first['id']), first)
+
     def test_development_history_keeps_claims_distinct_from_verification(self):
         self.put('README.md', '# Objective\nMake project switching easier.\n')
         self.put('proposal.md', '# Proposed approach\nUntested filesystem watcher.\n')
@@ -52,7 +106,7 @@ class BriefingTests(unittest.TestCase):
         self.assertEqual(second['changes']['groups']['newly_retained']['paths'], ['results.md'])
         self.assertEqual(second['changes']['groups']['no_longer_retained']['paths'], ['issue.md'])
         self.assertEqual(second['sections']['outcomes']['items'][0]['evidence_status'], 'historical_record')
-        self.assertNotIn('Use polling', json.dumps(second))
+        self.assertNotIn('Use polling', json.dumps(second['sections']))
         self.assertTrue(any('independent test results are unknown' in s for s in second['limitations']))
         for section in second['sections'].values():
             for item in section['items']:

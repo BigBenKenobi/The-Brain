@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Configured local source",
+  "type": "object",
+  "required": [
+    "id",
+    "project_id",
+    "kind",
+    "location",
+    "prefix",
+    "configuration"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "project_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "kind": {
+      "const": "local_directory"
+    },
+    "location": {
+      "type": "string"
+    },
+    "prefix": {
+      "type": "string"
+    },
+    "configuration": {
+      "type": "object",
+      "required": [
+        "excluded_paths",
+        "historical",
+        "enabled",
+        "revision",
+        "budgets"
+      ],
+      "properties": {
+        "excluded_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "historical": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "budgets": {
+          "type": "object",
+          "required": [
+            "max_files",
+            "max_file_bytes",
+            "max_total_bytes",
+            "max_seconds"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "max_files": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_file_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_total_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_seconds": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

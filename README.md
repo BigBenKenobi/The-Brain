@@ -168,3 +168,6 @@ snapshot; repeating an unchanged consolidation is a no-op. New merged snapshots
 require a fresh retirement review. Consolidation leaves information private and
 preserves documented/proposal/implementation status without elevating outcomes.
 
+
+Saved source configuration, observation freshness and the explicit version-1 to
+version-2 store upgrade are documented in [source settings](docs/source-settings.md).
