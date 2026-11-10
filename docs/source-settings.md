@@ -39,8 +39,8 @@ or implementation is not independently verified behavior.
 
 ## Store compatibility and rollback
 
-Source settings introduced writer format 2. This package now creates writer-3
-stores for lightweight observations. Version-1/2 stores remain readable but require an
+Source settings introduced writer format 2. This package now creates writer-4
+stores for evidence blobs. Version-1/2/3 stores remain readable but require an
 explicit upgrade before writes:
 
 ```sh
@@ -52,13 +52,13 @@ lock, copies the store and compatible reader code, verifies copied file hashes
 and snapshot structure, and only then changes the configuration writer version.
 The backup destination must not exist and must be outside the store. Existing
 snapshots and approval files are not rewritten. Old version-1 writers reject the
-version-3 configuration. For rollback, stop writers and restore the complete
+version-4 configuration. For rollback, stop writers and restore the complete
 backup store with its saved code; do not mix files from before and after upgrade.
-The saved version-3 reader reads the version-1 backup but requires upgrade before
+The saved version-4 reader reads the version-1 backup but requires upgrade before
 writing it; retain the previous application release for immediate legacy writes.
 
-This delivery cannot open later version-4 stores. It is not a
-runtime replacement for such deployments.
+The new writer format and copy-only compaction are described in
+[storage compaction](storage-compaction.md). No runtime activation is implied.
 
 ## Validation
 

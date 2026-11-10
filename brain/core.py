@@ -12,8 +12,8 @@ import uuid
 import zipfile
 
 VERSION = 1
-STORE_VERSION = 3
-EXTRACTOR = 'deterministic-3'
+STORE_VERSION = 4
+EXTRACTOR = 'deterministic-4'
 EXCLUDED = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', 'dist', 'build', '.cache', '.pytest_cache', 'target'}
 TEXT = {'.md', '.rst', '.txt', '.py', '.js', '.ts', '.tsx', '.jsx', '.json', '.toml', '.yaml', '.yml', '.ini', '.cfg', '.rs', '.go', '.java', '.c', '.h', '.cpp', '.cs', '.sh', '.sql', '.conf', '.config', '.service', '.timer', '.target', '.desktop', '.rules', '.container', '.widget', '.menu', '.theme', '.dirs', '.list', '.log', '.stderr', '.patch', '.xml', '.ui', '.css', '.html', '.swift', '.plist', '.xcprivacy', '.pbxproj', '.xcscheme', '.sha256', '.tsv'}
 SECRET = re.compile(r'-----BEGIN .*PRIVATE KEY|\b(?:AKIA|ASIA)[A-Z0-9]{16}\b|\b(?:sk-|ghp_)[A-Za-z0-9_-]{16,}|(?:password|secret|api[_-]?key|access[_-]?token)[\"\']?\s*[=:]\s*[\"\']?[^\s\"\']{4,}', re.I)
@@ -62,7 +62,7 @@ class Brain:
         self.root = Path(root).resolve()
         self.config = read(self.root / 'config.json')
         self.registry_path = self.root / 'registry.json'
-        if self.config.get('schema_version') not in (1, 2, STORE_VERSION):
+        if self.config.get('schema_version') not in (1, 2, 3, STORE_VERSION):
             raise ValueError('Unsupported configuration version')
         for key in ('max_files', 'max_file_bytes', 'max_total_bytes', 'max_seconds', 'review_days'):
             if type(self.config.get(key)) is not int or self.config[key] <= 0:
@@ -113,7 +113,7 @@ class Brain:
                             raise ValueError('Backup copy verification failed')
                 count = 0
                 for path in (backup / 'store' / 'projects').glob('*/snapshots/*.json'):
-                    validate(read(path))
+                    validate(self.snapshot(path.parent.parent.name, path.stem))
                     count += 1
                 write(backup / 'rollback.json', {'store': str(self.root), 'schema_version': config['schema_version'],
                     'snapshots_validated': count, 'store_file_sha256': hashes,
@@ -172,8 +172,10 @@ class Brain:
             if str(uuid.UUID(base_id)) != base_id or base_id == sid:
                 raise ValueError('Invalid observation content reference')
             base = read(self.root / 'projects' / project_id / 'snapshots' / (base_id + '.json'))
-            if base.get('storage_format') or base['id'] != base_id or base['project_id'] != project_id:
+            if base.get('storage_format') not in (None, 'evidence-blobs-1') or base['id'] != base_id or base['project_id'] != project_id:
                 raise ValueError('Observation must reference a full snapshot in the same project')
+            from .storage import materialize
+            base = materialize(self.root, base)
             validate(base)
             for key in ('evidence', 'records', 'search_index'):
                 if key in result:
@@ -181,6 +183,10 @@ class Brain:
                 result[key] = base[key]
             del result['storage_format']
             del result['content_snapshot']
+            validate(result)
+        elif result.get('storage_format') == 'evidence-blobs-1':
+            from .storage import materialize
+            result = materialize(self.root, result)
             validate(result)
         elif result.get('storage_format'):
             raise ValueError('Unsupported snapshot storage format')
@@ -470,12 +476,16 @@ class Brain:
             unchanged = old.get('id') is not None and all(snap[k] == old.get(k) for k in ('evidence', 'search_index')) and {
                 r['id']: r for r in snap['records']} == {r['id']: r for r in old['records']}
             stored = dict(snap)
+            from .storage import encode, store_blobs
+            pending_blobs = {}
             if unchanged:
                 previous_storage = read(folder / 'snapshots' / (old['id'] + '.json'))
                 base_id = previous_storage.get('content_snapshot', old['id'])
                 stored.update(storage_format='observation-1', content_snapshot=base_id)
                 for key in ('evidence', 'records', 'search_index'):
                     del stored[key]
+            else:
+                stored, pending_blobs = encode(self.root, snap)
             # Only this atomic pointer publication exposes a completed snapshot.
             project = projects.setdefault(project_id, {'id': project_id, 'name': source.name, 'locations': []})
             if str(source) not in project['locations']:
@@ -498,8 +508,10 @@ class Brain:
                 needed = len(json.dumps(stored, indent=2, sort_keys=True).encode()) + len(json.dumps(registry, indent=2, sort_keys=True).encode()) + control_reserve
                 if catalog is not None:
                     needed += len(json.dumps(catalog, indent=2, sort_keys=True).encode())
+                needed += sum(len(value) for value in pending_blobs.values())
                 if used + needed > max_store_bytes:
                     raise OSError('Capture deferred: storage capacity reached')
+            store_blobs(self.root, project_id, pending_blobs)
             write(folder / 'snapshots' / (sid + '.json'), stored)
             if catalog is not None:
                 write(folder / 'state' / 'catalogs' / (catalog['id'] + '.json'), catalog)
@@ -650,20 +662,41 @@ class Brain:
         q = match_tokens(query)
         target = set(t.lower() for t in technologies)
         found, omissions = {}, []
-        for origin in read(self.registry_path)['projects']:
+        projects = read(self.registry_path)['projects']
+        # Sharing metadata determines which foreign projects may contribute.
+        # Do not load unrelated private evidence just to discover it is unapproved.
+        approvals = {}
+        for path in (self.root / 'shared').glob('*.json'):
+            try:
+                a = read(path)
+                if (not isinstance(a, dict) or a.get('schema_version') != VERSION
+                        or a.get('record_id') != path.stem or a.get('project_id') not in projects
+                        or a.get('permission') != 'shared'
+                        or type(a.get('review_after')) not in (int, float)
+                        or not (time.time() <= a['review_after'] < float('inf'))
+                        or not isinstance(a.get('technologies'), list) or not a['technologies']
+                        or not all(isinstance(t, str) and t for t in a['technologies'])
+                        or not set(a['technologies']).issubset(target)):
+                    continue
+            except (OSError, ValueError, TypeError):
+                # Invalid approvals confer no permission. They are never evidence.
+                continue
+            approvals.setdefault(a['project_id'], {})[a['record_id']] = a
+        for origin in projects:
+            own = origin == project_id
+            if not own and origin not in approvals:
+                continue
             s = self.snapshot(origin)
             validate(s)
             edges = {e['older']: e for e in s.get('relations', [])}
             replacements = {e['replacement'] for e in edges.values()}
             allowed = {}
-            own = origin == project_id
             for r in s['records']:
                 if not own:
-                    path = self.root / 'shared' / (r['id'] + '.json')
-                    if not path.exists():
+                    a = approvals[origin].get(r['id'])
+                    if a is None:
                         continue
-                    a = read(path)
-                    if a['permission'] != 'shared' or a['review_after'] < time.time() or a['evidence_sha256'] != r['evidence']['sha256'] or not set(a['technologies']).issubset(target):
+                    if a['review_after'] < time.time() or a.get('evidence_sha256') != r['evidence']['sha256']:
                         continue
                 rt = match_tokens(r['statement'])
                 observation = next((f.get('observed_at') for f in s['files']
@@ -798,13 +831,25 @@ def extract(project_id, path, text, sha, historical=False):
     # Scan all sections and bounded windows before selecting excerpts. This is
     # lexical prioritization, not semantic analysis or independent verification.
     starts = sorted(set([0] + [i for i, line in enumerate(lines) if line.startswith('#')]))
+    if Path(path).suffix.lower() in {'.md', '.txt', '.rst'}:
+        from .briefing import substantive_table_row
+        fenced = False
+        boundaries = set(starts)
+        for i, line in enumerate(lines):
+            if line.lstrip().startswith(('```', '~~~')):
+                fenced = not fenced
+            if not fenced and substantive_table_row(line):
+                # A row remains an exact source excerpt with its own line span;
+                # do not synthesize headings or combine non-contiguous cells.
+                boundaries.update((i, i + 1))
+        starts = sorted(boundaries)
     windows = []
     signals = {
         'decision': r'\b(decision|decided|chosen|because|rationale)\b',
         'solution': r'\b(solution|workaround|fixed|resolved|resolution)\b',
         'lesson': r'\b(lesson|learned|avoid|pitfall)\b',
-        'limitation': r'\b(limit|limitation|unsupported|cannot|caveat)\b',
-        'unresolved': r'\b(unresolved|todo|blocked|remaining|regression|known issue)\b',
+        'limitation': r'\b(limit|limitation|unsupported|cannot|caveat|timed out)\b',
+        'unresolved': r'\b(unresolved|todo|blocked|remaining|regression|known issue|pending|timeout)\b|\bOpen:',
     }
     for n, section_start in enumerate(starts):
         section_end = starts[n + 1] if n + 1 < len(starts) else len(lines)
@@ -844,7 +889,7 @@ def extract(project_id, path, text, sha, historical=False):
         archived = historical or any(part.lower() in {'archive', 'backups', 'application-reference'} or part.startswith('Replication-') for part in Path(path).parts)
         code = Path(path).suffix.lower() in {'.py', '.sh', '.c', '.h', '.cpp', '.rs', '.go', '.java', '.cs', '.js', '.ts', '.jsx', '.tsx', '.swift'} or text.startswith('#!')
         status = 'proposal' if re.search(r'\b(proposed|proposal|untested)\b', statement, re.I) or 'proposal' in path.lower() else ('observed_implementation' if code and not archived else 'historical_record')
-        records.append({'id': digest(f'{project_id}:{path}:{sha}:{start}'.encode()), 'project_id': project_id, 'category': 'project_specific', 'knowledge_kinds': kinds, 'source_role': 'historical_copy' if archived else ('implementation' if code else 'documented_claim'), 'subject': f'{path}:{start+1}', 'statement': statement, 'evidence': {'path': path, 'sha256': sha, 'start_line': start+1, 'end_line': end}, 'evidence_status': status, 'technologies': [], 'constraints': ['Environment and version compatibility require explicit review'], 'limitations': ['Source excerpt; claims and outcomes have not been independently tested', f'Lexical selection is limited to {window_limit} windows per file, 24 lines and 1800 characters per window; surrounding context may be omitted'], 'relationships': [], 'reuse_candidate': candidate, 'reuse_eligibility': 'private_pending_approval', 'freshness': 'unreviewed', 'created_at': time.time()})
+        records.append({'id': digest(f'{EXTRACTOR}:{project_id}:{path}:{sha}:{start}:{end}'.encode()), 'project_id': project_id, 'category': 'project_specific', 'knowledge_kinds': kinds, 'source_role': 'historical_copy' if archived else ('implementation' if code else 'documented_claim'), 'subject': f'{path}:{start+1}', 'statement': statement, 'evidence': {'path': path, 'sha256': sha, 'start_line': start+1, 'end_line': end}, 'evidence_status': status, 'technologies': [], 'constraints': ['Environment and version compatibility require explicit review'], 'limitations': ['Source excerpt; claims and outcomes have not been independently tested', f'Lexical selection is limited to {window_limit} windows per file, 24 lines and 1800 characters per window; surrounding context may be omitted'], 'relationships': [], 'reuse_candidate': candidate, 'reuse_eligibility': 'private_pending_approval', 'freshness': 'unreviewed', 'created_at': time.time()})
     return records
 
 

@@ -16,9 +16,10 @@
       "enum": [
         1,
         2,
-        3
+        3,
+        4
       ],
-      "description": "Version 3 guards lightweight observation snapshots; versions 1 and 2 remain read-only until explicit upgrade."
+      "description": "Versions 1, 2 and 3 are read-only; 4 guards project-scoped evidence blob writers."
     },
     "max_files": {
       "type": "integer",

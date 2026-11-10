@@ -35,12 +35,12 @@ by observation. Meaningful changes still publish a full content snapshot.
 
 ## Writer compatibility
 
-New stores use writer version3. Readers accept versions1 and2, but an explicit
+Lightweight observations were introduced with writer version3. New stores now use
+writer version4 for evidence blobs; see [storage compaction](storage-compaction.md). Readers accept versions1–3, but an explicit
 `upgrade-store --backup /separate/new/backup` is required before writing. Exercise
 that upgrade against a coherent copy first. Historical snapshots are not rewritten;
 older writers reject the newer configuration. Restore the complete matching backup
-store and compatible code for rollback, with writers stopped. This package cannot
-read later writer4 evidence-blob stores.
+store and compatible code for rollback, with writers stopped. Version3 runtimes cannot read version4 evidence-blob stores.
 
 ## Fedora timer installation
 
@@ -66,7 +66,9 @@ independent controls. This document does not enable anything by itself.
 
 ## Validation scope
 
-The delivery's package bytes match pinned runtime `227e5c7fbcf35d6bb8f6`.
+The original refresh delivery matched pinned runtime `227e5c7fbcf35d6bb8f6`.
+The newer package in this branch adds writer4 and must be validated separately
+before activation; it has not replaced that live pinned runtime.
 The suite covers repeated saves, unchanged storage, corruption, failed publication,
 source disappearance/recovery, persisted retry after process restart, contention,
 pause/resume, partial writes and capacity limits. The live curated-note deployment

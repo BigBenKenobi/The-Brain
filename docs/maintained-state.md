@@ -50,23 +50,43 @@ compaction remains future work.
 This is the deterministic foundation of milestone 4. It is not a local model adapter,
 a semantic truth check, or proof that a briefing improves human resumption time.
 
-The bounded display balances item kinds and source paths after giving reviewed
-items priority. Configuration values do not seed project commitments. Long prose
-under explicit headings can yield exact paragraph previews, while explicit
-verification caveats remain separate from inferred blockers or passed gates. Preview
-character offsets and original record/source references preserve attribution; partial
-previews require surrounding evidence to interpret qualifications.
+The bounded display balances item kinds and source paths after giving explicit
+reviewed items priority. It does not resolve or delete omitted items. Same-corpus
+paired selection and a ten-capture simulated absence trial are recorded in
+`evaluations/maintained-state-results.json`.
 
-## Delivery boundary and validation
+## Explicit consolidation of duplicate support
 
-This delivery reads/writes store version3 and derived journal version1. It does not
-include later version4 evidence blobs or journal-version2 support consolidation,
-and must not replace a deployment requiring those newer formats. Older capture
-writers can leave a catalogue stale; explicit state-sync is the supported recovery.
-Do not manually lower format versions. Preserve compatible code and store backups.
+```text
+state-consolidate PROJECT_ID SURVIVOR_ITEM ABSORBED_ITEM --rationale "Reviewed as the same decision"
+state-undo PROJECT_ID EVENT_ID --rationale "Withdraw equivalence review"
+```
 
-86 unittest tests pass on Python3.11.18 and3.14.10. State tests cover stable identity,
-missing blockers beyond the history budget, correction/undo, cycle and scope checks,
-failed publication, catalogue reuse/reconciliation and balanced bounded output.
-Configuration and paragraph-preview tests preserve reviewed corrections and exact
-evidence spans. These tests establish neither local-model quality nor human benefit.
+Consolidation is an explicit local interpretation. It keeps the survivor's summary,
+identity and memory purpose, combines retained evidence claims, and marks the other
+item as represented by that survivor. Original identities remain in `--include-history`;
+no snapshot, evidence, record, source file or sharing approval is rewritten or removed.
+Work stage and verification strength are not elevated. A bounded view reports how
+many original items are represented by consolidation and still limits displayed
+claims; the full state retains the complete claim set.
+
+Kind, work stage, currency and purpose must agree before grouping. Resolve differences
+with explicit corrections first. Contradictory or superseding items cannot be grouped.
+Other relationships keep their original endpoint identities and remain visible when
+the consolidated group is displayed. Later canonical precedence conflicting with a
+group marks it uncertain and reports that consolidation needs review; it never erases
+the conflicting relationship. Additional duplicates can be grouped into an existing
+survivor; absorbed identities cannot be independently edited until consolidation is
+undone. This avoids silently redirecting corrections to a different item.
+
+Undo is append-only and validates the resulting replay before publication. If undoing
+an earlier correction would invalidate a dependent grouping, undo that grouping first.
+Publication failure leaves the old journal head authoritative. No automated semantic
+matching, permanent erasure, source cleanup or journal garbage collection is added.
+
+The first consolidation publishes state journal head version 2. New readers accept
+versions 1 and 2; older version-1 state readers reject version 2 explicitly. The store
+writer format remains 4, and snapshot readers still materialize canonical schema 1.
+After undo the journal stays version 2 because its audit history still contains the
+consolidation. Keep a compatible reader for that history; undo does not authorize
+rewriting the head back to version 1.

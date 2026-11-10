@@ -13,6 +13,9 @@ def main(argv=None):
     sub.add_parser('init')
     sub.add_parser('list')
     sub.add_parser('doctor')
+    sub.add_parser('storage-preview', help='Preview lossless evidence compaction and current storage')
+    p = sub.add_parser('compact-copy', help='Create a verified compact store without changing the original')
+    p.add_argument('destination')
     sub.add_parser('sources', help='List explicitly configured sources')
     sub.add_parser('refresh-once', help='Run one bounded due-source refresh pass')
     sub.add_parser('refresh-status', help='Show automatic capture policy and health')
@@ -127,6 +130,11 @@ def main(argv=None):
     p.add_argument('project_id')
     p.add_argument('event_id')
     p.add_argument('--rationale', required=True)
+    p = sub.add_parser('state-consolidate', help='Group reviewed duplicate items while preserving evidence and undo')
+    p.add_argument('project_id')
+    p.add_argument('survivor')
+    p.add_argument('absorbed')
+    p.add_argument('--rationale', required=True)
     p = sub.add_parser('promote')
     p.add_argument('project_id')
     p.add_argument('record_id')
@@ -165,6 +173,9 @@ def main(argv=None):
             elif args.command == 'sources':
                 from .core import read
                 result = list(read(b.registry_path).get('sources', {}).values())
+            elif args.command in ('storage-preview', 'compact-copy'):
+                from .storage import preview, compact_copy
+                result = preview(b) if args.command == 'storage-preview' else compact_copy(b, args.destination)
             elif args.command == 'refresh':
                 result = b.refresh(args.source_id)
             elif args.command == 'relocate-source':
@@ -212,7 +223,7 @@ def main(argv=None):
                 result = b.relate(args.project_id, args.older, args.replacement, args.kind, args.rationale)
             elif args.command == 'undo-relation':
                 result = b.undo_relation(args.project_id, args.older, args.rationale)
-            elif args.command in ('state', 'state-sync', 'state-correct', 'state-relate', 'state-undo'):
+            elif args.command in ('state', 'state-sync', 'state-correct', 'state-relate', 'state-undo', 'state-consolidate'):
                 from .state import ProjectState, bounded_view
                 state = ProjectState(b, args.project_id)
                 if args.command == 'state':
@@ -221,6 +232,8 @@ def main(argv=None):
                     result = state.sync(args.max_snapshots)
                 elif args.command == 'state-undo':
                     result = state.undo(args.event_id, args.rationale)
+                elif args.command == 'state-consolidate':
+                    result = state.consolidate(args.survivor, args.absorbed, args.rationale)
                 else:
                     evidence = {'snapshot': args.snapshot or b.project(args.project_id)['snapshot'], 'record_id': args.record_id}
                     if args.command == 'state-correct':

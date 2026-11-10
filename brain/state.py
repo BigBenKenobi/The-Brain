@@ -72,7 +72,7 @@ class ProjectState:
         if not self.head.exists():
             return []
         head = read(self.head)
-        if head.get('version') != 1 or head.get('project_id') != self.project_id:
+        if head.get('version') not in (1, 2) or head.get('project_id') != self.project_id:
             raise ValueError('Invalid state journal identity')
         events = []
         seen = set()
@@ -83,7 +83,7 @@ class ProjectState:
             event = read(self.root / 'events' / (eid + '.json'))
             if event['id'] != eid or event['project_id'] != self.project_id:
                 raise ValueError('State event identity mismatch')
-            if event.get('type') not in ('correct', 'relate', 'undo'):
+            if event.get('type') not in ('correct', 'relate', 'consolidate', 'undo'):
                 raise ValueError('Unsupported state event')
             self._rationale(event.get('rationale'))
             if event['type'] == 'undo':
@@ -106,7 +106,7 @@ class ProjectState:
             raise ValueError('State evidence record is absent from the cited project snapshot')
         return snapshot, record
 
-    def view(self, *, max_snapshots=64, max_items=2000):
+    def view(self, *, max_snapshots=64, max_items=2000, _events=None):
         if type(max_snapshots) is not int or not 1 <= max_snapshots <= 1000:
             raise ValueError('State snapshot budget must be 1..1000')
         if type(max_items) is not int or not 1 <= max_items <= 10000:
@@ -153,13 +153,13 @@ class ProjectState:
                 if configuration_source(record):
                     continue  # Explicit reviewed journal seeds are restored below.
                 items[iid] = seed(self.project_id, snapshot, record, entry['kind'])
-        events = self.events()
+        events = self.events() if _events is None else _events
         disabled = {event['target'] for event in events if event['type'] == 'undo'}
         relations = []
         for event in events:
             if event['type'] == 'undo' or event['id'] in disabled:
                 continue
-            if event['type'] not in ('correct', 'relate'):
+            if event['type'] not in ('correct', 'relate', 'consolidate'):
                 raise ValueError('Unsupported state event')
             # Explicitly reviewed endpoints remain available even outside the scan budget.
             for endpoint in event['seeds']:
@@ -179,6 +179,8 @@ class ProjectState:
                 # Evidence strength is scoped to sources, never raised by a free-text correction.
                 item['evidence_strength'] = 'source_observed' if all(self.evidence(c)[1].get('source_role') == 'implementation' for c in item['claims']) else 'reported'
                 item.update(reviewed=True, origin='explicit_interpretation', last_correction=event['id'])
+            elif event['type'] == 'consolidate':
+                self._consolidate_items(items, relations, event['survivor'], event['absorbed'], event['id'])
             else:
                 if event['kind'] not in RELATIONS:
                     raise ValueError('Unsupported state relationship')
@@ -197,6 +199,14 @@ class ProjectState:
         for edge in relations:
             if edge['kind'] == 'supersedes':
                 items[edge['to']]['currency'] = 'superseded'
+        for item in items.values():
+            if item.get('consolidated_members'):
+                members = {item['id'], *item['consolidated_members']}
+                conflicts = [edge['id'] for edge in relations if edge['from'] in members and edge['to'] in members
+                             and edge['kind'] in ('contradicts', 'supersedes')]
+                if conflicts:
+                    item['consolidation_conflicts'] = conflicts
+                    item['currency'] = 'uncertain'
         for item in items.values():
             available = any(c['record_id'] in active_records for c in item['claims'])
             item['availability'] = 'retained_in_current_capture' if available else 'retained_history_only'
@@ -296,7 +306,8 @@ class ProjectState:
         event = dict(event, id=str(uuid.uuid4()), project_id=self.project_id, created_at=time.time(),
                      authority='explicit_local_interpretation', evidence_strength='reported')
         write(self.root / 'events' / (event['id'] + '.json'), event)
-        write(self.head, {'version': 1, 'project_id': self.project_id, 'events': [e['id'] for e in events] + [event['id']]})
+        version = 2 if event['type'] == 'consolidate' or (self.head.exists() and read(self.head).get('version') == 2) else 1
+        write(self.head, {'version': version, 'project_id': self.project_id, 'events': [e['id'] for e in events] + [event['id']]})
         return event
 
     def _seed_refs(self, state, identities):
@@ -305,8 +316,49 @@ class ProjectState:
             if iid not in state['items']:
                 raise ValueError('Unknown item identity')
             item = state['items'][iid]
+            if item.get('consolidated_into'):
+                raise ValueError('Use the consolidation survivor, or undo consolidation first')
             refs.append({'item_id': iid, 'kind': item['kind'], 'evidence': item['claims'][0]})
         return refs
+
+    @staticmethod
+    def _consolidate_items(items, relations, survivor, absorbed, event_id):
+        """Combine reviewed support, retaining the original items as historical aliases.
+
+        Relationships continue to name original identities; consolidation does not
+        manufacture precedence or retarget a contradiction to a different claim.
+        """
+        if survivor == absorbed or survivor not in items or absorbed not in items:
+            raise ValueError('Consolidation requires two distinct known items')
+        target, source = items[survivor], items[absorbed]
+        if target.get('consolidated_into') or source.get('consolidated_into') or source.get('consolidated_members'):
+            raise ValueError('Use active survivors; consolidate additional items into the existing survivor')
+        for field in ('kind', 'work_stage', 'currency', 'purpose'):
+            if target[field] != source[field]:
+                raise ValueError('Consolidation interpretation conflict: ' + field)
+        members = {survivor, absorbed, *target.get('consolidated_members', [])}
+        if any(e['from'] in members and e['to'] in members and e['kind'] in ('contradicts', 'supersedes') for e in relations):
+            raise ValueError('Resolve contradictory or superseding relationships before consolidation')
+        claims = {(c['snapshot'], c['record_id']) for c in target['claims']}
+        for claim in source['claims']:
+            if (claim['snapshot'], claim['record_id']) not in claims:
+                target['claims'].append(deepcopy(claim))
+                claims.add((claim['snapshot'], claim['record_id']))
+        target.setdefault('consolidated_members', []).append(absorbed)
+        target.update(reviewed=True, origin='explicit_interpretation', last_consolidation=event_id)
+        target['evidence_strength'] = 'source_observed' if target['evidence_strength'] == source['evidence_strength'] == 'source_observed' else 'reported'
+        source['consolidated_into'] = survivor
+        source['consolidation_event'] = event_id
+
+    def consolidate(self, survivor, absorbed, rationale):
+        """Explicitly group duplicate support without deleting evidence or approvals."""
+        self._rationale(rationale)
+        with self.brain.lock():
+            state = self.view()
+            refs = self._seed_refs(state, [survivor, absorbed])
+            self._consolidate_items(deepcopy(state['items']), state['relationships'], survivor, absorbed, 'preview')
+            return self._append({'type': 'consolidate', 'survivor': survivor, 'absorbed': absorbed,
+                'evidence': refs[0]['evidence'], 'rationale': rationale, 'seeds': refs})
 
     def correct(self, iid, changes, evidence, rationale):
         self.validate_changes(changes)
@@ -336,9 +388,12 @@ class ProjectState:
             events = self.events()
             target = next((e for e in events if e['id'] == event_id), None)
             if target is None or target['type'] == 'undo':
-                raise ValueError('Undo requires an existing correction or relationship event')
+                raise ValueError('Undo requires an existing correction, relationship or consolidation event')
             if any(e.get('target') == event_id for e in events if e['type'] == 'undo'):
                 raise ValueError('Event is already undone')
+            # Removing an earlier correction must not publish an unreadable
+            # dependent consolidation. Undo the dependent grouping first.
+            self.view(_events=events + [{'id': str(uuid.uuid4()), 'type': 'undo', 'target': event_id}])
             return self._append({'type': 'undo', 'target': event_id, 'rationale': rationale})
 
     @staticmethod
@@ -377,7 +432,7 @@ def prepare_catalog(brain, project_id, old, current, previous_catalog=None):
 def bounded_view(state, limit=20, include_history=False):
     if type(limit) is not int or not 1 <= limit <= 100:
         raise ValueError('State display limit must be 1..100')
-    items = [i for i in state['items'].values() if include_history or i['currency'] != 'superseded']
+    items = [i for i in state['items'].values() if include_history or (i['currency'] != 'superseded' and not i.get('consolidated_into'))]
     from collections import Counter
     from .briefing import quality
     priority = {'blocker': 0, 'decision': 1, 'attempt': 2, 'idea': 3}
@@ -402,7 +457,9 @@ def bounded_view(state, limit=20, include_history=False):
             'summary_truncated': len(item['summary']) > 400,
             'claims': item['claims'][:5], 'claims_omitted': max(0, len(item['claims']) - 5)})
     selected_ids = {i['id'] for i in chosen}
+    selected_ids.update(member for i in chosen for member in i.get('consolidated_members', []))
     relations = [e for e in state['relationships'] if e['from'] in selected_ids or e['to'] in selected_ids]
     return {**{k: state[k] for k in ('state_version', 'project_id', 'snapshot', 'visibility', 'coverage', 'limitations')},
             'items': chosen, 'omitted_items': len(items) - len(chosen),
+            'consolidated_items': sum(bool(i.get('consolidated_into')) for i in state['items'].values()),
             'relationships': relations[:limit], 'omitted_relationships': max(0, len(relations) - limit)}

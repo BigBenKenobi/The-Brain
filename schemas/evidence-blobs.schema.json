@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Evidence blob snapshot storage (materialize before canonical validation)",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "project_id",
+    "storage_format",
+    "evidence_refs",
+    "records",
+    "files",
+    "search_index"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "storage_format": {
+      "const": "evidence-blobs-1"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    }
+  },
+  "not": {
+    "required": [
+      "evidence"
+    ]
+  }
+}

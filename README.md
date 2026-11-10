@@ -177,3 +177,7 @@ documented in [automatic local refresh](docs/automatic-refresh.md).
 
 [Maintained project state](docs/maintained-state.md) describes private decisions,
 ideas, attempts and blockers with evidence-backed correction, relationships and undo.
+
+[Evidence storage and compaction](docs/storage-compaction.md) covers writer4,
+copy-only migration, derived-state integrity checks and rollback. Explicit support
+consolidation and its undo are described in [maintained state](docs/maintained-state.md).
