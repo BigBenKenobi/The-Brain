@@ -107,6 +107,12 @@ class BriefingTests(unittest.TestCase):
         self.assertEqual(second['changes']['groups']['no_longer_retained']['paths'], ['issue.md'])
         self.assertEqual(second['sections']['outcomes']['items'][0]['evidence_status'], 'historical_record')
         self.assertNotIn('Use polling', json.dumps(second['sections']))
+        from brain.state import ProjectState
+        historical = next(i for i in ProjectState(self.brain, pid).view()['items'].values() if 'Use polling' in i['summary'])
+        self.assertGreater(second['maintained_state']['omitted_items'], 0)
+        self.assertEqual(historical['availability'], 'retained_history_only')
+        self.assertEqual(historical['currency'], 'uncertain')
+        self.assertFalse(historical['reviewed'])
         self.assertTrue(any('independent test results are unknown' in s for s in second['limitations']))
         for section in second['sections'].values():
             for item in section['items']:

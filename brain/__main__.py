@@ -92,6 +92,41 @@ def main(argv=None):
     p.add_argument('replacement')
     p.add_argument('--kind', required=True, choices=['corrects', 'supersedes', 'duplicates'])
     p.add_argument('--rationale', required=True)
+    p = sub.add_parser('undo-relation', help='Undo a reviewed record relationship without altering evidence')
+    p.add_argument('project_id')
+    p.add_argument('older')
+    p.add_argument('--rationale', required=True)
+    p = sub.add_parser('state', help='Bounded maintained project items')
+    p.add_argument('project_id')
+    p.add_argument('--limit', type=int, default=20)
+    p.add_argument('--max-snapshots', type=int, default=64)
+    p.add_argument('--include-history', action='store_true')
+    p = sub.add_parser('state-sync', help='Backfill the retained item catalogue within an explicit budget')
+    p.add_argument('project_id')
+    p.add_argument('--max-snapshots', type=int, default=64)
+    p = sub.add_parser('state-correct', help='Correct a derived interpretation with retained evidence')
+    p.add_argument('project_id')
+    p.add_argument('item_id')
+    p.add_argument('--summary')
+    p.add_argument('--kind', choices=['decision', 'idea', 'attempt', 'blocker'])
+    p.add_argument('--work-stage', choices=['proposed', 'accepted', 'in_progress', 'implemented', 'unknown'])
+    p.add_argument('--currency', choices=['active', 'superseded', 'historical', 'uncertain'])
+    p.add_argument('--purpose', choices=['active_work', 'decision_rationale', 'unresolved_problem', 'avoid_repeated_failure', 'future_opportunity'])
+    p.add_argument('--record-id', required=True)
+    p.add_argument('--snapshot')
+    p.add_argument('--rationale', required=True)
+    p = sub.add_parser('state-relate', help='Relate two items with an evidence-backed rationale')
+    p.add_argument('project_id')
+    p.add_argument('source_item')
+    p.add_argument('target_item')
+    p.add_argument('--kind', required=True, choices=['supports', 'contradicts', 'supersedes', 'implements', 'blocks', 'derives_from'])
+    p.add_argument('--record-id', required=True)
+    p.add_argument('--snapshot')
+    p.add_argument('--rationale', required=True)
+    p = sub.add_parser('state-undo', help='Undo one interpretation event, retaining its audit history')
+    p.add_argument('project_id')
+    p.add_argument('event_id')
+    p.add_argument('--rationale', required=True)
     p = sub.add_parser('promote')
     p.add_argument('project_id')
     p.add_argument('record_id')
@@ -175,6 +210,24 @@ def main(argv=None):
                 result = b.verify_archive(args.path)
             elif args.command == 'relate':
                 result = b.relate(args.project_id, args.older, args.replacement, args.kind, args.rationale)
+            elif args.command == 'undo-relation':
+                result = b.undo_relation(args.project_id, args.older, args.rationale)
+            elif args.command in ('state', 'state-sync', 'state-correct', 'state-relate', 'state-undo'):
+                from .state import ProjectState, bounded_view
+                state = ProjectState(b, args.project_id)
+                if args.command == 'state':
+                    result = bounded_view(state.view(max_snapshots=args.max_snapshots), args.limit, args.include_history)
+                elif args.command == 'state-sync':
+                    result = state.sync(args.max_snapshots)
+                elif args.command == 'state-undo':
+                    result = state.undo(args.event_id, args.rationale)
+                else:
+                    evidence = {'snapshot': args.snapshot or b.project(args.project_id)['snapshot'], 'record_id': args.record_id}
+                    if args.command == 'state-correct':
+                        changes = {key: getattr(args, key) for key in ('summary', 'kind', 'work_stage', 'currency', 'purpose') if getattr(args, key) is not None}
+                        result = state.correct(args.item_id, changes, evidence, args.rationale)
+                    else:
+                        result = state.relate(args.source_item, args.target_item, args.kind, evidence, args.rationale)
             elif args.command == 'promote':
                 result = b.promote(args.project_id, args.record_id, args.technology, args.rationale, args.review_days)
             elif args.command in ('search', 'context'):

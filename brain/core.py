@@ -482,6 +482,12 @@ class Brain:
                 project['locations'].append(str(source))
             project['snapshot'] = sid
             registry.setdefault('sources', {})[source_id] = configured
+            from .state import load_catalog, prepare_catalog
+            previous_catalog = load_catalog(self, project_id, project['state_catalog']) if project.get('state_catalog') else None
+            catalog = None
+            if not unchanged or previous_catalog is None:
+                catalog = prepare_catalog(self, project_id, old, snap, previous_catalog)
+                project['state_catalog'] = catalog['id']
             if max_store_bytes is not None:
                 if type(max_store_bytes) is not int or max_store_bytes < 1:
                     raise ValueError('Invalid storage capacity')
@@ -490,9 +496,13 @@ class Brain:
                 state_path = self.root / 'refresh-state.json'
                 control_reserve = max(65536, 2 * state_path.stat().st_size + 8192) if state_path.exists() else 65536
                 needed = len(json.dumps(stored, indent=2, sort_keys=True).encode()) + len(json.dumps(registry, indent=2, sort_keys=True).encode()) + control_reserve
+                if catalog is not None:
+                    needed += len(json.dumps(catalog, indent=2, sort_keys=True).encode())
                 if used + needed > max_store_bytes:
                     raise OSError('Capture deferred: storage capacity reached')
             write(folder / 'snapshots' / (sid + '.json'), stored)
+            if catalog is not None:
+                write(folder / 'state' / 'catalogs' / (catalog['id'] + '.json'), catalog)
             write(self.registry_path, registry)
             return {'project_id': project_id, 'source_id': source_id, 'snapshot': sid, 'observation_only': unchanged,
                     'metrics': metrics, 'records': len(snap['records']), 'capture': snap['capture'], 'report': self.retirement(project_id)}
@@ -607,6 +617,27 @@ class Brain:
             registry['projects'][project_id]['snapshot'] = s['id']
             write(self.registry_path, registry)
             return {'changed': True, 'snapshot': s['id'], 'relation': edge}
+
+    def undo_relation(self, project_id, older, rationale):
+        if not rationale.strip() or len(rationale) > 1000 or SECRET.search(rationale):
+            raise ValueError('A non-sensitive undo rationale is required')
+        with self.lock():
+            registry = read(self.registry_path)
+            snapshot = self.snapshot(project_id)
+            edge = next((e for e in snapshot.get('relations', []) if e['older'] == older), None)
+            if edge is None:
+                raise ValueError('No active relationship for that older record')
+            snapshot['relations'].remove(edge)
+            snapshot['interpretation_change'] = {'action': 'undo_record_relation', 'edge': edge,
+                                                  'rationale': rationale, 'at': time.time()}
+            snapshot['parent_snapshot'] = snapshot['id']
+            snapshot['id'] = str(uuid.uuid4())
+            snapshot['created_at'] = time.time()
+            validate(snapshot)
+            write(self.root / 'projects' / project_id / 'snapshots' / (snapshot['id'] + '.json'), snapshot)
+            registry['projects'][project_id]['snapshot'] = snapshot['id']
+            write(self.registry_path, registry)
+            return {'snapshot': snapshot['id'], 'undone': edge}
 
     def retrieve(self, query, project_id=None, technologies=(), limit=5, max_chars=6000,
                  blocked=(), history=False, explain=False, max_age_days=None):
@@ -731,6 +762,8 @@ class Brain:
                            'configured_revision': configured['configuration']['revision'],
                            'captured_revision': effective.get('revision')})
         briefing['source_health'] = health
+        from .state import ProjectState, bounded_view
+        briefing['maintained_state'] = bounded_view(ProjectState(self, project_id).view(), limit)
         return briefing
 
     def archive(self, project_id):

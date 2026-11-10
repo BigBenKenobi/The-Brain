@@ -1,6 +1,7 @@
 """Read-only, deterministic evidence briefings; never inferred completion claims."""
 from collections import Counter
 from datetime import datetime, timezone
+from pathlib import PurePosixPath
 import re
 
 
@@ -11,8 +12,10 @@ SECTIONS = {
     'problems': 'Problem and constraint excerpts',
     'attempts': 'Attempted and discarded approaches',
     'next_actions': 'Recorded next-step statements (currency unreviewed)',
+    'qualification': 'Qualification caveats (source statements, not verified outcomes)',
     'outcomes': 'Reported outcomes and lessons',
     'implementation': 'Observed source code (not verified functionality)',
+    'configuration': 'Observed configuration (not project commitments)',
     'historical': 'Historical reference excerpts',
     'unavailable': 'Previously retained context now unavailable (resolution unknown)',
 }
@@ -35,11 +38,30 @@ def heading_section(record):
     return next((key for key, pattern in HEADING_SIGNALS.items() if re.search(pattern, heading)), None)
 
 
+def configuration_source(record):
+    """Conservatively identify configuration formats, including legacy records.
+
+    JSON/YAML are deliberately excluded: they can be narrative note exports.
+    This presentation rule does not rewrite canonical source roles or approvals.
+    """
+    return PurePosixPath(record['evidence']['path']).suffix.lower() in {
+        '.toml', '.ini', '.cfg', '.conf', '.config', '.service', '.timer',
+        '.target', '.desktop', '.rules', '.container', '.plist', '.pbxproj',
+    }
+
+
+def qualification_caveat(text):
+    """Detect explicit limits on verification, without deciding acceptance state."""
+    return bool(re.search(r'\b(?:not(?!\s+(?:only|just)\b)|never)\b[^.!?]{0,100}\b(?:passed|verified|validated|qualified|accepted)\b|\b(?:unverified|unvalidated|unqualified)\b', text, re.I))
+
+
 def classify(record):
     """Presentation candidates, never a transition of canonical claim status."""
     kinds = set(record.get('knowledge_kinds', []))
     if record.get('source_role') == 'historical_copy':
         return ('historical', 'Explicit historical source; currency is not inferred') if kinds or heading_section(record) else None
+    if configuration_source(record):
+        return 'configuration', 'Configuration text was observed; labels and values do not establish project commitments or outcomes'
     # Strings in source code describing proposals are not project proposals.
     if record.get('source_role') == 'implementation':
         return 'implementation', 'Source code was observed; execution and completion are unknown'
@@ -48,6 +70,8 @@ def classify(record):
     explicit = heading_section(record)
     if explicit == 'objectives':
         return explicit, 'Source heading describes an objective or guiding policy; excerpt is not a verified state'
+    if qualification_caveat(record['statement']):
+        return 'qualification', 'Source explicitly limits qualification or verification; no blocker, pass or acceptance is inferred'
     if record['evidence_status'] == 'proposal':
         return 'ideas', 'Source is labelled proposal or untested; adoption is unknown'
     if explicit:
@@ -61,6 +85,8 @@ def classify(record):
         return 'decisions', 'Source contains decision or rationale language'
     if kinds & {'solution', 'lesson'}:
         return 'outcomes', 'Source reports a solution or lesson; outcome is unverified'
+    if record['evidence']['start_line'] == 1 and re.search(r'\b(application|project|tool|service)\b', text, re.I):
+        return 'objectives', 'Source introduction describes project scope; release acceptance is not established'
     if re.search(r'\b(objective|north star|mission|goal|should)\b', text, re.I):
         return 'objectives', 'Source describes a possible objective; normative wording is not a commitment'
     if re.search(r'\b(idea|ideas|proposed|proposal)\b', text, re.I):
@@ -68,19 +94,31 @@ def classify(record):
     return None
 
 
+def substantive_table_row(line):
+    """Recognize prose-bearing Markdown cells, excluding numeric coverage tables."""
+    stripped = line.strip()
+    if not stripped.startswith('|') or stripped.count('|') < 3:
+        return False
+    cells = [cell.strip() for cell in stripped.strip('|').split('|')]
+    return any(len(cell) >= 60 and len(re.findall(r'[A-Za-z]{2,}', cell)) >= 10 for cell in cells)
+
+
 def narrative_lines(record):
     lines = [line.strip() for line in record['statement'].splitlines() if line.strip()]
-    return [line for line in lines if not line.startswith(('#', '|', '```', 'python', '$', 'git '))
-            and not re.match(r'^\*{0,2}(status|date|updated|project root|chat):', line, re.I)]
+    return [line for line in lines if substantive_table_row(line) or (
+            not line.startswith(('#', '|', '```', 'python', '$', 'git '))
+            and not re.match(r'^\*{0,2}(status|date|updated|project root|chat):', line, re.I))]
 
 
 def quality(record):
     lines = [line.strip() for line in record['statement'].splitlines() if line.strip()]
     narrative = narrative_lines(record)
     body = sum(len(line) for line in narrative)
-    commands = sum(line.startswith(('python', '$', 'git ', '```', '|')) for line in lines)
-    return (-bool(heading_section(record)), -(body >= 60), commands,
-            record['evidence']['path'], record['evidence']['start_line'], record['id'])
+    commands = sum(line.startswith(('python', '$', 'git ', '```', '|')) and not substantive_table_row(line) for line in lines)
+    table = any(substantive_table_row(line) for line in lines)
+    failure = table and bool(re.search(r'\b(timeout|timed out|failed|regression|unresolved|blocked)\b', record['statement'], re.I))
+    return (-failure, -record.get('_emphasis', False), -bool(record.get('_heading_section') or heading_section(record) or table), -(body >= 60), commands,
+            record['evidence']['path'], record['evidence']['start_line'], record['id'], record.get('_excerpt_start', 0))
 
 
 def select_diverse(records, limit):
@@ -99,10 +137,45 @@ def select_diverse(records, limit):
     return selected
 
 
+def preview_candidates(records):
+    """Offer exact paragraphs from explicitly headed prose without rewriting records.
+
+    Explicit opening emphasis is a presentation signal, not evidence strength.
+    Unheaded text, code/configuration and fences retain their original preview.
+    An explicit source heading supplies shared context. Qualification caveats
+    may also select a paragraph that itself carries the verification limit.
+    Each candidate keeps the canonical ID and source range; offsets identify the
+    exact displayed substring within that record. No text is synthesized.
+    """
+    result = []
+    for record in records:
+        text = record['statement']
+        caveat = classify(record) and classify(record)[0] == 'qualification'
+        if (not heading_section(record) and not caveat) or len(text) <= 400 or record.get('source_role') == 'implementation' or configuration_source(record) or '```' in text or '~~~' in text:
+            result.append(record)
+            continue
+        paragraphs = []
+        for match in re.finditer(r'\S.*?(?=\n[ \t]*\n|\Z)', text, re.S):
+            value = match.group().rstrip()
+            if not narrative_lines({'statement': value}) or (caveat and not qualification_caveat(value)):
+                continue
+            opening = re.match(r'^\*\*([^*\n]+)\*\*', value)
+            candidate = dict(record, statement=value,
+                _excerpt_start=match.start(), _record_chars=len(text),
+                _heading_section=heading_section(record),
+                _emphasis=bool(opening and not opening.group(1).endswith(':')))
+            paragraphs.append(candidate)
+        result.extend(paragraphs if len(paragraphs) > 1 or (caveat and paragraphs) else [record])
+    return result
+
+
 def excerpt_item(record, snapshot, reason):
     return {
         'record_id': record['id'], 'snapshot': snapshot['id'],
-        'excerpt': record['statement'][:400], 'excerpt_truncated': len(record['statement']) > 400,
+        'excerpt': record['statement'][:400],
+        'excerpt_start_char': record.get('_excerpt_start', 0),
+        'excerpt_end_char': record.get('_excerpt_start', 0) + min(400, len(record['statement'])),
+        'excerpt_truncated': record.get('_record_chars', len(record['statement'])) > min(400, len(record['statement'])),
         'evidence': dict(record['evidence']), 'evidence_status': record['evidence_status'],
         'source_role': record.get('source_role', 'unknown'), 'selection_reason': reason,
         'consolidated_from': record.get('consolidated_from'),
@@ -151,9 +224,10 @@ def build_briefing(name, current, previous=None, limit=3):
         candidates[key].append(record)
         reasons[record['id']] = reason
     for key, records in candidates.items():
-        chosen = select_diverse(records, limit)
+        previews = preview_candidates(records)
+        chosen = select_diverse(previews, limit)
         sections[key]['items'] = [excerpt_item(r, current, reasons[r['id']]) for r in chosen]
-        sections[key]['omitted'] = len(records) - len(chosen)
+        sections[key]['omitted'] = len(previews) - len(chosen)
     if previous is not None:
         retained_paths = {f['path'] for f in current['files'] if f['status'] in ('retained', 'duplicate')}
         prior_obsolete = obsolete | {e['older'] for e in previous.get('relations', [])}
@@ -169,6 +243,7 @@ def build_briefing(name, current, previous=None, limit=3):
         'This describes the last captured evidence, not live workstation activity. Snapshot publication time is not source freshness.',
         'Sections are lexical candidates, not reconciled facts. Negation, superseded decisions and contradictions require review.',
         'Current activity, exact completion stage and independent test results are unknown.',
+        'Previews may omit surrounding qualifications; open retained evidence before acting on an excerpt.',
         'Selection reasons explain this briefing only. All previously retained evidence remains stored; no forgetting policy is implemented.',
     ]
     if current.get('historical'):
@@ -204,7 +279,7 @@ def render_briefing(briefing):
             lines += ['Unknown: no matching excerpt selected.']
         for item in section['items']:
             e = item['evidence']
-            lines += ['\n'.join('> ' + line for line in item['excerpt'].splitlines()) + (' …' if item['excerpt_truncated'] else ''),
+            lines += ['\n'.join('> ' + line for line in (('… ' if item.get('excerpt_start_char', 0) else '') + item['excerpt'] + (' …' if item['excerpt_truncated'] else '')).splitlines()),
                       f"Evidence: {e['path']}:{e['start_line']}-{e['end_line']} ({item['evidence_status']}); record {item['record_id']}",
                       'Included because: ' + item['selection_reason']]
             if item['consolidated_from']:
@@ -226,6 +301,25 @@ def render_briefing(briefing):
         if delta['scope_changed']:
             lines += ['Capture scope, budgets, historical flag or supplement pins changed.']
     coverage = briefing['coverage']
+    maintained = briefing.get('maintained_state')
+    if maintained:
+        lines += ['', '## Maintained items (candidates unless explicitly reviewed)']
+        for item in maintained['items']:
+            lines += [f"{item['kind']}: {item['id']} — {item['work_stage']}; {item['evidence_strength']}; {item['currency']}; {item['availability']}",
+                      '\n'.join('> ' + line for line in item['summary'].splitlines()),
+                      'Memory purpose: ' + item['purpose']]
+            if item.get('consolidated_members'):
+                lines += [f"Combined support from {len(item['consolidated_members'])} other retained items; original identities remain in history."]
+            if item.get('consolidation_conflicts'):
+                lines += ['Consolidation needs review: later evidence relationships conflict with the grouping.']
+            for claim in item['claims']:
+                lines += [f"Evidence: {claim['path']}:{claim['start_line']}-{claim['end_line']} / snapshot {claim['snapshot']} / record {claim['record_id']}"]
+        if maintained['omitted_items']:
+            lines += [f"{maintained['omitted_items']} further items omitted; use the state command for more."]
+        if maintained.get('consolidated_items'):
+            lines += [f"{maintained['consolidated_items']} original items represented by explicit consolidation; no evidence was deleted."]
+        if any(maintained['coverage'].get(k) for k in ('history_truncated', 'legacy_lineage_unknown', 'catalogue_backfill_pending', 'items_truncated')):
+            lines += ['State coverage is incomplete or has unknown legacy lineage: ' + str(maintained['coverage'])]
     lines += ['', '## Source capture health']
     if not briefing.get('source_health'):
         lines += ['Unknown: no attributable source observation metadata.']

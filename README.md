@@ -174,3 +174,6 @@ version-2 store upgrade are documented in [source settings](docs/source-settings
 
 Opt-in scheduling, pause/retry, bounded storage and writer-3 observations are
 documented in [automatic local refresh](docs/automatic-refresh.md).
+
+[Maintained project state](docs/maintained-state.md) describes private decisions,
+ideas, attempts and blockers with evidence-backed correction, relationships and undo.
