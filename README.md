@@ -36,6 +36,9 @@ These remain documented excerpts, not AI-generated or independently verified ins
 
 ## Run
 
+For development checks, disposable CLI fixtures and contribution guidance, see
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 For development on another machine or in an online terminal with Python 3.11+
 (Linux/POSIX), clone the repository and run the tests:
 
@@ -50,8 +53,10 @@ The repository includes source, tests, schemas and development documentation.
 The private `Project-Brain/` knowledge store, retained source evidence and local
 reviews are excluded from Git. Initialize a fresh store for development; the
 historical project IDs and local paths below describe the original installation
-and are not available in a fresh clone. The scripts in `scripts/` are specific to
-that local Fedora collection and are not required for development or tests.
+and are not available in a fresh clone. Fedora collection scripts such as
+`scripts/ingest_fedora.py` target that local installation; they are not development
+prerequisites. Other helpers are portable: the tests exercise
+`scripts/run_verification.py` against synthetic processes.
 
 From this directory, use `python3 -m brain`. An optional installed `brain` entry point
 is declared in `pyproject.toml`; no installation is necessary for the commands below.
@@ -180,8 +185,10 @@ executed. The source folder is `/home/KenobiBigBen/Setup Fedora`.
 
 `ingest` accepts per-run `--max-files`, `--max-file-bytes`, `--max-total-bytes`,
 `--max-seconds`, repeatable relative `--exclude-path`, and `--historical`.
-Budgets and scope are recorded in each new snapshot. Exclusions must be supplied
-again on later CLI ingestions; the collection runner preserves its explicit partition.
+Budgets and scope are recorded in each new snapshot. Later ingestions reuse the
+source's saved exclusions and budgets when those options are omitted; use
+`configure-source` to change the saved settings. The collection runner also
+preserves its explicit partition.
 `python3 scripts/ingest_fedora.py verify` repeats the current collection ingestion
 with those scopes, checks extraction reuse and validates retained evidence.
 `evidence` reads only stored text, bounded to 200 lines per call. Historical
@@ -261,7 +268,7 @@ checks and a successful transient timer run from real-source activation.
 Long prose under explicit section headings can supply paragraph previews instead of
 only the record prefix. Each preview remains an exact substring of retained evidence
 with its original record identity and source range; JSON includes character offsets
-within that record. The400-character per-preview bound and section limits still
+within that record. The 400-character per-preview bound and section limits still
 apply. Ellipses/partial-record labels indicate omitted surrounding context; open the
 evidence before relying on qualifications. Omitted counts refer to preview candidates.
 
