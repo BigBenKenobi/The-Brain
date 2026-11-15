@@ -1,0 +1,18 @@
+{
+  "change": "Configuration evidence is distinct from project objectives and automatic state candidates. Explicit reviewed corrections remain available.",
+  "tests": {
+    "3.11.18": 119,
+    "3.14.10": 119
+  },
+  "first_project_replay": "evaluations/runs/2026-11-10/replay-configuration-context/report.json",
+  "second_project_replay": "evaluations/runs/2026-11-10/tinker-configuration-context/report.json",
+  "model_input_preparation": "evaluations/runs/2026-11-10/model-input-configuration/preparation-report.json",
+  "scores": "First-project current 5/5, unchanged 5/5, held-out 3/3; expanded vision remains 0/2. Tinker 2/3, 2/3, 3/5. All expected phrases remain in bounded model inputs.",
+  "live_store_modified": false,
+  "published": false,
+  "sha256": {
+    "brain/briefing.py": "c703d9940e4ffba5a9d3754204dff9f8666a7c11d5ee9a4e945630c1d22b472b",
+    "brain/state.py": "d53bbc038f4989e15780f220f1c878b0ab42787e7a23e48e6143269b432c8d10",
+    "tests/test_configuration_context.py": "f422f96aaaadbb8538d2f6ebf5e852e565cee923abbd7c5e327b956e589453f1"
+  }
+}

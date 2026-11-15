@@ -1,0 +1,45 @@
+{
+  "commit": "c5b4c26f43f9dcd864b5d523d22a833bdc7604f0",
+  "branch": "codex/offline-model-boundary",
+  "base": "2a1aaac22f18e131a95510a0d50c04936671a03f",
+  "tests": {
+    "3.11.18": 128,
+    "3.14.10": 128
+  },
+  "cli_trial": {
+    "input_exported": true,
+    "exact_quote_proposal_validated": true,
+    "proposals_unreviewed": true,
+    "oversized_file_rejected": true,
+    "duplicate_keys_rejected": true,
+    "store_byte_unchanged": true,
+    "model_invoked": false,
+    "model_identity": "fixture caller-reported; not attested"
+  },
+  "package_matches_development": true,
+  "package_sha256": {
+    "interpretation.py": "60e5fa130cca3e1f4bfe2b8c6959cb8c0ffd6ba65389d0aecbc50cb672493b21",
+    "storage.py": "12a2abcfae1459ae943ce16c10e7164aabce534665110e8c512f73d8be29e670",
+    "state.py": "d53bbc038f4989e15780f220f1c878b0ab42787e7a23e48e6143269b432c8d10",
+    "sources.py": "f4101588a085a6c787ec54871e3a2702ac89d610deafc5e20b51e914f0f81d62",
+    "refresh.py": "2bfda6dcbf618960128f4db38bc7d1e81f45867b27c75566a26fd58cebc8237a",
+    "extraction.py": "daf4cdcd5e26adafc8687f0b1d3fbfaa851bf9a3c990de35b92487a64d865911",
+    "core.py": "78042f30408b92eadf26d7cae3fad3d7e1ebc7b24fbfa9fe6a24d1c4481006a7",
+    "briefing.py": "f5c27b5a6514919c870cdc4a57b8e7f358548415e7cc9f7cb97c987ef6076098",
+    "__main__.py": "f36a88eafb527e17b35e1f84b76a964bee6357cef96df94807a452ad65f77051",
+    "__init__.py": "f47290bae77b8603c68d267a3532e634401bd2d3f46596c830359e568d066533"
+  },
+  "bundle_verified": true,
+  "publication": "Published with explicit user approval; draft and unmerged",
+  "runtime_adapter_implemented": false,
+  "hosting_access": "Deferred by user",
+  "artifacts": {
+    "model-boundary.bundle": "169259891fd559864080aee85a1025c8ed22f73a2e26e2ba495846d64c17036e",
+    "model-boundary.patch": "0bc84113e3227f240009f329007b2ed610bf9d26f7befc1b1cf73978e8aab971",
+    "python314.log": "fae8a1c1a8b2adc03e44fc4566e5690229f5cfb004ddfda6653bd1495e8cf29a",
+    "python311.log": "895ef555d7bdb5f1def83d1439878a0510d345337ee04eaa68f6fe5ea542f1df",
+    "cli-trial.json": "1660a9b3ab699bef7627c2e71c972920385daae4a7a7cc1f9998831c5bb8a77b"
+  },
+  "published": true,
+  "pr": "https://github.com/BigBenKenobi/The-Brain/pull/7"
+}

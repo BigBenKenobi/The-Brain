@@ -1,0 +1,64 @@
+{
+  "commit": "2a1aaac22f18e131a95510a0d50c04936671a03f",
+  "branch": "codex/evidence-storage-consolidation",
+  "base": "5c6ceaf2941a18c102153c2165074dc7f1f3d784",
+  "tests": {
+    "3.11.18": 120,
+    "3.14.10": 120
+  },
+  "store_writer": 4,
+  "state_journal_reader": [
+    1,
+    2
+  ],
+  "model_transport": false,
+  "cli_trial": {
+    "old_store_writer": 3,
+    "new_store_writer": 4,
+    "actual_old_reader_rejected_copy": true,
+    "new_state_readable": true,
+    "archive_integrity_verified": true,
+    "original_files_unchanged": true,
+    "receipt": {
+      "format": "evidence-blobs-1",
+      "source": "/tmp/tmpyrhx87vb/legacy",
+      "destination": "/tmp/tmpyrhx87vb/compact",
+      "snapshots_compared_equal": 1,
+      "other_artifacts_byte_preserved": 2,
+      "original_bytes": 5553,
+      "compact_bytes_before_receipt": 5597,
+      "original_snapshot_sha256": {
+        "projects/ff1ced0e-9166-4fa5-9488-6a863d07eee0/snapshots/b6d06ab0-e17a-40cf-9124-3e6d17bc7687.json": "fbbabcd0b408fbfd30d0732ed338a875dfcb2fe46a30d25464976cfc1b70bd98"
+      },
+      "derived_state_projects_checked": 1,
+      "derived_state": {
+        "ff1ced0e-9166-4fa5-9488-6a863d07eee0": {
+          "references_checked": 1,
+          "view_sha256": "24545a412d4630f11ae6a1ca4acc6957b74e07f09fdc2ed72416d8ececea533e"
+        }
+      },
+      "loss_preview": {
+        "evidence_removed": 0,
+        "snapshots_removed": 0,
+        "approvals_changed": 0
+      },
+      "activated": false,
+      "source_modified": false,
+      "rollback": "Original store and its existing compatible runtime remain unchanged. Do not delete either. Do not run an older writer on this version-4 copy.",
+      "limits": "Physical representation changes only in the copy. No garbage collection or semantic pruning."
+    },
+    "scope": "Disposable explicit CLI migration; no live deployment."
+  },
+  "bundle_verified": true,
+  "publication": "Published with explicit user approval; draft and unmerged",
+  "production_activation": false,
+  "artifacts": {
+    "storage.bundle": "bb5ccf70c835828ec068e658db72c5981c23b59cfdaed6730473b7269cc4b94e",
+    "storage.patch": "16ccafc4bee8d92bb49beea1bc038137a2a580bbb009ac584df909d95112fa8f",
+    "python314.log": "0998e8761ff3c46d8e92f021eaf71afaee82d159530d7f1ef3c5cb9ac5fa58ff",
+    "python311.log": "dfe02c07cf81a44994d66308706d6aeb5ef155dd8af95081534021c6dc5fa5e0",
+    "cli-trial.json": "343fd3b920a391f9a46e691fd4014a359a52fb34c9f94b430ccd5ed2c624e895"
+  },
+  "published": true,
+  "pr": "https://github.com/BigBenKenobi/The-Brain/pull/6"
+}

@@ -1,0 +1,135 @@
+{
+  "commit": "9ab32d0ed69cd7e29a236725f7f9cfd25d4109dd",
+  "base": "c5b4c26f43f9dcd864b5d523d22a833bdc7604f0",
+  "branch": "codex/explicit-acceptance-caveats",
+  "tests": {
+    "3.11.18": 131,
+    "3.14.10": 131
+  },
+  "wheel_matches_commit_and_primary_package": true,
+  "bundle_verified": true,
+  "installed_pilot": {
+    "installed_module": "/tmp/brain-open-gates-env/lib64/python3.11/site-packages/brain/__init__.py",
+    "original_corpora_unchanged": true,
+    "results": [
+      {
+        "corpus": "first",
+        "checkpoint": "01-main",
+        "limit": 3,
+        "hits": 1,
+        "total": 1,
+        "traceable_items": 15,
+        "store_unchanged": true
+      },
+      {
+        "corpus": "first",
+        "checkpoint": "02-briefing-pr",
+        "limit": 3,
+        "hits": 2,
+        "total": 2,
+        "traceable_items": 17,
+        "store_unchanged": true
+      },
+      {
+        "corpus": "first",
+        "checkpoint": "03-local",
+        "limit": 3,
+        "hits": 5,
+        "total": 5,
+        "traceable_items": 26,
+        "store_unchanged": true
+      },
+      {
+        "corpus": "first",
+        "checkpoint": "04-unchanged",
+        "limit": 3,
+        "hits": 5,
+        "total": 5,
+        "traceable_items": 26,
+        "store_unchanged": true
+      },
+      {
+        "corpus": "first",
+        "checkpoint": "06-held-out",
+        "limit": 3,
+        "hits": 3,
+        "total": 3,
+        "traceable_items": 3,
+        "store_unchanged": true
+      },
+      {
+        "corpus": "second",
+        "checkpoint": 0,
+        "limit": 3,
+        "hits": 3,
+        "total": 3,
+        "traceable_items": 10,
+        "store_unchanged": true
+      },
+      {
+        "corpus": "second",
+        "checkpoint": 0,
+        "limit": 8,
+        "hits": 3,
+        "total": 3,
+        "traceable_items": 16,
+        "store_unchanged": true
+      },
+      {
+        "corpus": "second",
+        "checkpoint": 1,
+        "limit": 3,
+        "hits": 3,
+        "total": 3,
+        "traceable_items": 10,
+        "store_unchanged": true
+      },
+      {
+        "corpus": "second",
+        "checkpoint": 1,
+        "limit": 8,
+        "hits": 3,
+        "total": 3,
+        "traceable_items": 17,
+        "store_unchanged": true
+      },
+      {
+        "corpus": "second",
+        "checkpoint": 2,
+        "limit": 3,
+        "hits": 4,
+        "total": 5,
+        "traceable_items": 7,
+        "store_unchanged": true
+      },
+      {
+        "corpus": "second",
+        "checkpoint": 2,
+        "limit": 8,
+        "hits": 5,
+        "total": 5,
+        "traceable_items": 12,
+        "store_unchanged": true
+      }
+    ]
+  },
+  "published": true,
+  "live_runtime_changed": false,
+  "artifacts": {
+    "open-gates.bundle": "02a6fb4caf0507d9b5577342b92205cd871fd167278e73d7fb98d2625ac55184",
+    "bundle-verification.txt": "852e8b50b0b53bc9ca276e8dd1e350925d77e3296831061785343d838fd0dbdf",
+    "open-gates.patch": "e5066a37231b2a14c9ff8a192578a7b90980c950e13e72b421d9785ce1329033",
+    "python314.log": "0bbd4448435225d78513e7cc2820918545a8a16c23c4e42198e107d80959c7d3",
+    "python311.log": "8784d1b887f85f7c54a6fc03b17276f24c4cc5f28a69f243b9b0d4ccd33d3390",
+    "installed-pilot.json": "a1046fa8cd3d4048de3a966f263ccffb90e6ccb422c0288d198f6f85228c54b1",
+    "check_installed_pilot.py": "e93c2ac8a9b5e3b9e97e0424e68938993c7e85f25d8be7d662c17665e0d16ff3",
+    "project_brain_local-0.1.0-py3-none-any.whl": "15f8aa66c9bf33f12715b0f8acc3c40cd3d3f2f19ea855070f6a3e108f2ff8b3"
+  },
+  "limits": [
+    "Exact excerpts and phrase visibility do not establish semantic acceptance.",
+    "Hosting access, human resumption measurement, native acceptance and review/release remain pending.",
+    "Prior preactivation copy and prepared branches remain unchanged."
+  ],
+  "publication": "Published with explicit user approval; draft and unmerged",
+  "pr": "https://github.com/BigBenKenobi/The-Brain/pull/8"
+}

@@ -3,6 +3,10 @@
 Product direction and initial implementation audit, 4 November 2026.
 Baseline inspected: `773a803a0a9939cc4fd33a7ae5c937d57a781d34`.
 
+Historical design audit retained from briefing PR 1. The delivery order and
+acceptance criteria are now maintained in [development-plan.md](development-plan.md);
+current implementation evidence is in [development-status.md](development-status.md).
+
 ## Outcome
 
 The Brain should understand the user's development across local workspaces and

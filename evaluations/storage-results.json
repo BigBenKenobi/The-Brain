@@ -1,0 +1,31 @@
+{
+  "format": "evidence-blobs-1",
+  "source": "/home/KenobiBigBen/Documents/The Brain/Project-Brain",
+  "destination": "/home/KenobiBigBen/Documents/The Brain/backups/compaction-v4-20261110/store",
+  "snapshots_compared_equal": 181,
+  "other_artifacts_byte_preserved": 50,
+  "original_bytes": 169517179,
+  "compact_bytes_before_receipt": 100876154,
+  "loss_preview": {
+    "evidence_removed": 0,
+    "snapshots_removed": 0,
+    "approvals_changed": 0
+  },
+  "activated": false,
+  "source_modified": false,
+  "rollback": "Original store and its existing compatible runtime remain unchanged. Do not delete either. Do not run an older writer on this version-4 copy.",
+  "limits": "Physical representation changes only in the copy. No garbage collection or semantic pruning.",
+  "copied_refresh_policy_paused": true,
+  "unit_tests": 95,
+  "active_project_briefings_equal": 49,
+  "active_project_retrievals_equal": 49,
+  "actual_version_3_writer_rejected": true,
+  "bytes_saved": 68641025,
+  "post_trial_change": "Added symlink rejection preflight; regression passed. Materialization and comparison logic unchanged.",
+  "code_sha256": {
+    "brain/storage.py": "f7f0084d17f0cbd312dd1944732b643305646cd06791d3432d1dca2b27f2d3c3",
+    "brain/core.py": "fbe53c9ccc46cbe94d1a39e9335e03c5602450d07cd5990d4527fec20daa7df6",
+    "brain/__main__.py": "aa1864768be8676b0ae01fcf74bf79c3fcf32d8a3b4b6cc3203c328c47e001ec",
+    "tests/test_storage.py": "f0badd35575f0f6144d1d128993aa3856d751824791e270464ba85f7e244dfcf"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "fixture": "explicit equivalent decision grouping",
+  "grouping_event": "e4f1b561-9b4f-4121-847c-cc025a69e4d1",
+  "project_id": "ef30e5ba-d94f-4220-9945-6eb7aea84b12",
+  "cli_consolidation": true,
+  "combined_claims": 2,
+  "original_items_preserved": 2,
+  "undo_exact_items_restored": true,
+  "canonical_snapshot_unchanged": true,
+  "approval_bytes_unchanged": true,
+  "evidence_archive_valid": true,
+  "older_state_reader_rejected_journal_v2": true,
+  "production_store_modified": false,
+  "limits": [
+    "Grouping is an explicit interpretation, not automatic semantic equivalence.",
+    "Does not delete evidence or compact journal files.",
+    "No real project items were consolidated in this test."
+  ],
+  "tests_passed": {
+    "3.11.18": 117,
+    "3.14.10": 117
+  },
+  "sha256": {
+    "brain/state.py": "e72933ca2dd5c47235ca022fe0791ac6a29ea33cf7a0231ff02d35fcf416bf25",
+    "brain/briefing.py": "8e1ebe17287020dbc275420b32acf325885da059f9f56aba226a92dd622b1f76",
+    "brain/__main__.py": "f36a88eafb527e17b35e1f84b76a964bee6357cef96df94807a452ad65f77051",
+    "tests/test_state_consolidation.py": "dfbd6227a6e4f0671be9c7bcb8f7506dd40827635696df7ea01c3d330975acc1"
+  }
+}

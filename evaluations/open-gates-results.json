@@ -1,0 +1,71 @@
+{
+  "tests": {
+    "3.11.18": 131,
+    "3.14.10": 131
+  },
+  "second_project_short_view": [
+    [
+      3,
+      3
+    ],
+    [
+      3,
+      3
+    ],
+    [
+      4,
+      5
+    ]
+  ],
+  "second_project_latest_expanded": [
+    5,
+    5
+  ],
+  "first_project_reference_hits": [
+    [
+      1,
+      1
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      5,
+      5
+    ],
+    [
+      5,
+      5
+    ],
+    [
+      3,
+      3
+    ]
+  ],
+  "traceability": true,
+  "published": false,
+  "live_runtime_changed": false,
+  "package_matches_prior_delivery": false,
+  "sha256": {
+    "brain/__init__.py": "f47290bae77b8603c68d267a3532e634401bd2d3f46596c830359e568d066533",
+    "brain/__main__.py": "f36a88eafb527e17b35e1f84b76a964bee6357cef96df94807a452ad65f77051",
+    "brain/briefing.py": "d65207c857fa01250a7705916205ffda88a1813b3a4b41044f31d847c01299e0",
+    "brain/core.py": "78042f30408b92eadf26d7cae3fad3d7e1ebc7b24fbfa9fe6a24d1c4481006a7",
+    "brain/extraction.py": "daf4cdcd5e26adafc8687f0b1d3fbfaa851bf9a3c990de35b92487a64d865911",
+    "brain/interpretation.py": "60e5fa130cca3e1f4bfe2b8c6959cb8c0ffd6ba65389d0aecbc50cb672493b21",
+    "brain/refresh.py": "2bfda6dcbf618960128f4db38bc7d1e81f45867b27c75566a26fd58cebc8237a",
+    "brain/sources.py": "f4101588a085a6c787ec54871e3a2702ac89d610deafc5e20b51e914f0f81d62",
+    "brain/state.py": "d53bbc038f4989e15780f220f1c878b0ab42787e7a23e48e6143269b432c8d10",
+    "brain/storage.py": "12a2abcfae1459ae943ce16c10e7164aabce534665110e8c512f73d8be29e670"
+  },
+  "reports": [
+    "evaluations/runs/2026-11-10/tinker-open-gates-v2/report.json",
+    "evaluations/runs/2026-11-10/replay-open-gates-v2/report.json"
+  ],
+  "limits": [
+    "Phrase visibility and exact attribution do not prove semantic interpretation or human resumption benefit.",
+    "Existing prepared delivery branches and preactivation copy do not contain this follow-up.",
+    "No hosting connection, model evaluation, native acceptance, publication or deployment performed."
+  ]
+}

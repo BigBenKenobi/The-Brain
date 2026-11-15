@@ -20,7 +20,7 @@ for args in commands:
 write(out/'query-examples.json',results)
 entries={};total_metrics=Counter()
 for run in runs:
- s=read(b.root/'projects'/run['project_id']/'snapshots'/(run['snapshot']+'.json'))
+ s=b.snapshot(run['project_id'],run['snapshot'])
  validate(s);total_metrics.update(run['metrics'])
  for f in s['files']:
   if f['status']!='excluded_directory':entries[str(Path(run['source'])/f['path'])]=f

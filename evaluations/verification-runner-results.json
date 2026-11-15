@@ -1,0 +1,21 @@
+{
+  "tests": {
+    "3.11.18": 137,
+    "3.14.10": 137
+  },
+  "scope": "Explicit bounded process receipts; no automatic status adoption",
+  "receipt_hashes_verified": true,
+  "sha256": {
+    "scripts/run_verification.py": "24f514f80367f7dc6141ca7667835560c57a4e822a2e23568d6573628d37347b",
+    "tests/test_verification_runner.py": "ebf28111671b44b59225de92fa7dd949fae1ee2c8768a1ba5003c39b47832fbb",
+    "docs/verification-evidence.md": "233a4aa607163e3a26dce1131bc983ad429cf708a093aa70a61044e8b635fbaa"
+  },
+  "published": false,
+  "live_store_changed": false,
+  "limits": [
+    "Receipt adoption and scoped independently-verified item evidence remain unimplemented.",
+    "A successful command does not prove the supplied behavior description.",
+    "Source revision/status is not a reproducible archive.",
+    "Runner executes caller-selected commands without sandbox/network isolation."
+  ]
+}

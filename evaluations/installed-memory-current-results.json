@@ -1,0 +1,41 @@
+{
+  "python": "3.11.18",
+  "pyside6": "6.11.3",
+  "installed_brain_tests": 119,
+  "installed_tinker_memory_tests": 8,
+  "outside_checkout": true,
+  "isolated_python_flag": "-I",
+  "integration": {
+    "consolidation_conflict_visible": true,
+    "grouped_support_evidence_loaded": true,
+    "configuration_section_visible": true,
+    "real_cli_project_list": true,
+    "briefing_loaded": true,
+    "retained_evidence_loaded": true,
+    "store_byte_unchanged": true,
+    "model_context_unchanged": true,
+    "owner_revoke_cleared": true,
+    "qt": "6.11.3",
+    "mode": "offscreen",
+    "installed_packages": true,
+    "imports": {
+      "brain": "/tmp/brain-tinker-ui-env/lib/python3.11/site-packages/brain/core.py",
+      "tinker_memory": "/tmp/brain-tinker-ui-env/lib/python3.11/site-packages/ui/project_memory.py"
+    }
+  },
+  "wheel_sha256": {
+    "tinker-0.1.0-py3-none-any.whl": "e5f02faa47ecdbbcc7cb8dd46d58ff6aa8002aa45dacd5eca40fbd4179cb8a89",
+    "project_brain_local-0.1.0-py3-none-any.whl": "925cba470705d17e3fdb4ad8024c5d1238184b406953817596167bc1f917eeef"
+  },
+  "artifact_directory": "/home/KenobiBigBen/Documents/The Brain/evaluations/runs/2026-11-10/installed-memory-current",
+  "source_file_counts": {
+    "brain": 12,
+    "tinker": 1937
+  },
+  "limits": [
+    "Offscreen Qt check, not native KDE acceptance.",
+    "No real model inference or owner resumption acceptance.",
+    "Wheels are local validation artifacts; nothing was published or deployed.",
+    "Focused Tinker consumer tests only, not its full release matrix."
+  ]
+}

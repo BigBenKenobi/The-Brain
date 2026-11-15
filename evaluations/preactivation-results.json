@@ -1,0 +1,29 @@
+{
+  "commit": "c5b4c26f43f9dcd864b5d523d22a833bdc7604f0",
+  "source_writer": 3,
+  "copy_writer": 4,
+  "snapshots_equal": 188,
+  "original_snapshot_hashes_still_match": true,
+  "original_bytes": 170610166,
+  "copy_bytes_before_receipt_and_new_runtime": 101793332,
+  "bytes_saved_before_receipt_and_new_runtime": 68816834,
+  "copied_runtime": "8c5a0bba7b4078d12b50",
+  "copy_paused": true,
+  "actual_old_reader_rejected_copy": true,
+  "state_check": {
+    "reader": "pinned copy runtime",
+    "projects_read": 49,
+    "derived_state_written": false,
+    "candidate_items": 752,
+    "projects_with_truncated_discovery": 0
+  },
+  "live_runtime": "227e5c7fbcf35d6bb8f6",
+  "activated": false,
+  "live_derived_state_projects": 0,
+  "limits": [
+    "The real store has no derived journals; journal conflict/undo migration is proven only by dedicated fixtures.",
+    "Copied candidate views are not semantic or owner acceptance.",
+    "This copy will age; activation requires a fresh coherent cutover rehearsal and explicit approval.",
+    "No production service paths or intake permissions were changed."
+  ]
+}

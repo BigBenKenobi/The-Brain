@@ -1,0 +1,123 @@
+{
+  "brain": [
+    {
+      "pr": 6,
+      "commit": "2a1aaac22f18e131a95510a0d50c04936671a03f",
+      "run": 42812001538,
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 129815532528,
+          "name": "unittest (3.14)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 129815532791,
+          "name": "unittest (3.11)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "pr": 7,
+      "commit": "c5b4c26f43f9dcd864b5d523d22a833bdc7604f0",
+      "run": 42812015967,
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 129815582440,
+          "name": "unittest (3.14)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 129815583996,
+          "name": "unittest (3.11)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "pr": 8,
+      "commit": "9ab32d0ed69cd7e29a236725f7f9cfd25d4109dd",
+      "run": 42812029943,
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 129815622059,
+          "name": "unittest (3.11)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 129815622638,
+          "name": "unittest (3.14)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "pr": 9,
+      "commit": "9bdeadebddfcd1a999007d9e1229d6422ba113b0",
+      "run": 42812048518,
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 129815681017,
+          "name": "unittest (3.11)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 129815681231,
+          "name": "unittest (3.14)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "tinker": {
+    "pr": 71,
+    "commit": "84d6cc57ede836bb30f1ab42103ecdbfc6e24f06",
+    "run": 42812059392,
+    "status": "completed",
+    "superseded_push_run": 42811846498,
+    "superseded_push_conclusion": "cancelled",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 129815882078,
+        "name": "Desktop / Python 3.11",
+        "status": "completed",
+        "conclusion": "success",
+        "checkout_tests": 1865,
+        "archive_tests": 1865
+      },
+      {
+        "id": 129815882518,
+        "name": "Desktop / Python 3.14",
+        "status": "completed",
+        "conclusion": "success",
+        "checkout_tests": 1865,
+        "archive_tests": 1865
+      },
+      {
+        "id": 129815883581,
+        "name": "Desktop / Python 3.12",
+        "status": "completed",
+        "conclusion": "success",
+        "checkout_tests": 1865,
+        "archive_tests": 1865
+      }
+    ],
+    "installed_checks": "passed; Python 3.12 includes LaMa repair and network isolation",
+    "limits": "Offscreen and synthetic worker evidence is not native KDE or real model acceptance."
+  },
+  "live_runtime_changed": false,
+  "merged": false
+}

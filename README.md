@@ -16,23 +16,23 @@ this priority, its design rules and a practical acceptance scenario. When choosi
 features, favour reduced effort to capture, understand, retrieve and resume work
 over additional organisational complexity.
 
-**Current implementation:** a working local Python 3.11+ CLI for read-only
-project ingestion, private structured knowledge, retained source evidence,
-incremental snapshots, explicitly approved cross-project retrieval, and
-knowledge-retirement readiness reports. It uses no runtime dependencies or
-model credentials. The current extractor selects bounded source excerpts
-across whole files using explicit decision, solution, lesson, limitation and
-unresolved-issue language. These are documented excerpts, not AI-generated
-or independently verified insights. Automatic ongoing capture and semantic
-project-state reconciliation remain future work. A bounded `briefing` command
-presents the last captured evidence, unknowns and changes; it does not claim live
-activity or verified completion.
+The product direction is project continuity: recover objectives, decisions,
+supporting evidence and unfinished work when returning to a project. See the
+[vision](docs/vision.md), [development plan](docs/development-plan.md), and
+[implementation evidence](docs/development-status.md). Knowledge preservation and
+retirement remain part of that foundation.
 
-Preserving useful knowledge from material you intend to discard remains an
-important use case, not the limit of Brain's purpose. Retirement readiness
-measures reviewed knowledge survival with explicit gaps; complete source backup
-is an optional separate goal. See the
-[ingestion and retirement standard](docs/knowledge-retirement-standard.md).
+Project Brain preserves useful knowledge from material you intend to discard.
+Retirement readiness measures reviewed knowledge survival, with explicit gaps;
+a complete source backup is an optional separate goal.
+See [the ingestion and retirement standard](docs/knowledge-retirement-standard.md).
+
+A working local CLI for read-only project ingestion, private structured knowledge,
+retained evidence, explicitly approved cross-project retrieval and retirement
+readiness reports. Python 3.11+; no runtime dependencies or model credentials needed.
+The current extractor selects bounded source excerpts across each whole file using
+explicit decision, solution, lesson, limitation and unresolved-issue language.
+These remain documented excerpts, not AI-generated or independently verified insights.
 
 ## Run
 
@@ -72,19 +72,69 @@ python3 -m brain --brain /tmp/my-brain retire-check PROJECT_ID
 ```
 
 Set `PROJECT_BRAIN_HOME` to avoid repeating `--brain`. Default is `./Project-Brain`.
+Re-ingest the same path or use `refresh SOURCE_ID` to reuse saved settings and
+unchanged extraction results. Ingestion returns both the project and source IDs.
+For a project with one configured source, `ingest NEW_PATH --project-id PROJECT_ID`
+remains an explicit relocation shortcut. With multiple sources, use
+`relocate-source SOURCE_ID NEW_PATH` to select the source unambiguously.
 
-`briefing` gives a concise Markdown view (or structured JSON) with objective
-candidates, ideas, decisions, problems, reported outcomes and observed code.
-Each selected excerpt has an evidence reference and an inclusion reason. Unknowns,
-historical sources, pinned supplements and omitted results remain explicit.
-The default is three excerpts per section; `--limit` accepts 1 through 20. Changes
-compare retained text against the previous published snapshot when its identity
-was recorded. Legacy snapshots have no guessed baseline. This is a deterministic
-evidence briefing, not a live tracker or automatic memory-retention policy.
-See the [implementation audit and delivery plan](docs/development-state-plan.md).
+Briefings show bounded, cited excerpts from the last published capture. They
+compare recorded predecessor snapshots, report omissions, and label suggestions
+separately from commitments. Missing evidence does not establish deletion or
+resolved work. Explicit correction relationships suppress obsolete excerpts;
+legacy snapshots without a predecessor retain an unknown baseline. Source health
+reports the latest capture attempt separately from the last complete observation.
+An observation confirms bytes were read, not that a claim was reviewed or verified.
+Briefings prefer substantive explicit headings and varied sources, distinguish code
+strings from proposals, and label recorded next steps as currency-unreviewed. Missing
+context from the immediate predecessor is cited as unavailable, not resolved. This
+is still deterministic excerpt selection, not maintained semantic project state.
+See the [measured continuity pilot](evaluations/README.md) for results and remaining
+misses; human resumption-time acceptance is pending.
 
-Re-ingest the same path to reuse unchanged extraction results. Supply
-`ingest NEW_PATH --project-id PROJECT_ID` when relocating a known project.
+## Configure and refresh sources
+
+```bash
+python3 -m brain --brain /tmp/my-brain ingest /path/to/project --exclude-path generated --max-files 1000
+python3 -m brain --brain /tmp/my-brain sources
+python3 -m brain --brain /tmp/my-brain refresh SOURCE_ID
+python3 -m brain --brain /tmp/my-brain configure-source SOURCE_ID --clear-exclusions --no-historical --reset-budgets
+python3 -m brain --brain /tmp/my-brain relocate-source SOURCE_ID /new/path/to/project
+python3 -m brain --brain /tmp/my-brain ingest /path/to/notes --project-id PROJECT_ID --new-source --historical
+```
+
+Omitted options reuse each source's exclusions, historical designation and budgets.
+Explicit ingestion overrides are saved only when the capture publishes successfully.
+`configure-source` changes future settings without rewriting prior observations;
+the briefing distinguishes configured and captured revisions. Use
+`--clear-exclusions`, `--no-historical`, or `--reset-budgets` for explicit resets.
+Sources start disabled for automatic capture. `--enabled` opts a source in for a
+future scheduler; no background service is installed by these commands.
+
+The first source retains ordinary evidence paths. Additional sources use
+`sources/SOURCE_ID/` prefixes; refreshing one preserves the others. Pinned
+supplements retain their original observation dates. Same-project context no longer
+expires solely because extraction is old; `context ... --max-age-days DAYS` applies
+an explicit successful-observation filter, excluding unknown legacy dates. Sharing
+still requires separate, unexpired approval and matching evidence identity.
+
+Existing schema-1, schema-2 and schema-3 stores remain readable, but require an explicit upgrade before
+writes. Stop any older Brain writers, then run:
+
+```bash
+python3 -m brain --brain /path/to/store upgrade-store --backup /separate/new/backup-folder
+```
+
+The upgrade verifies a coherent code/store backup, validates retained snapshots,
+and publishes configuration version 4 to reject older writers. Historical snapshots
+stay at version 1 and are not rewritten. Rollback requires stopping writers and
+restoring the backed-up store with compatible code; the upgrade tool saves its
+current code, which reads older stores but requires re-upgrade for writes. Keep the
+pre-upgrade application version if rollback must restore the older writer. Rollback loses post-backup
+captures, so preserve those before any rollback. Single-location legacy settings
+are adopted on explicit ingestion. Ambiguous location histories require
+`--adopt-legacy` together with explicit exclusions, historical designation and all
+four budgets. Historical locations never automatically become capture targets.
 
 Inspect the project snapshot or `context` output to obtain a candidate record ID.
 Sharing requires deliberate approval and compatible technology labels:
@@ -168,6 +218,58 @@ snapshot; repeating an unchanged consolidation is a no-op. New merged snapshots
 require a fresh retirement review. Consolidation leaves information private and
 preserves documented/proposal/implementation status without elevating outcomes.
 
+## Reviewed corrections and current context
+
+`relate PROJECT_ID OLDER_RECORD_ID REPLACEMENT_RECORD_ID --kind corrects --rationale 'Evidence and scope of correction'`
+creates a new immutable snapshot with an explicit reviewed precedence link. `supersedes`
+(new decision) and `duplicates` (canonical equivalent) use the same direction. Both endpoints
+must belong to the project. Cycles and competing replacements are rejected; extend the
+existing chain for a later correction. Source evidence and old snapshots remain intact.
+Relations survive re-ingestion and are remapped with pinned consolidated supplements.
+Missing endpoints appear in validation warnings; they never restore an obsolete match.
+
+`context PROJECT_ID QUERY --explain` resolves historical matches to their final replacement
+before limits. Missing, expired, excluded or unapproved replacements suppress the old match.
+Cross-project retrieval still requires explicit approval of the replacement itself.
+`--include-history` exposes original matches marked historical. New timestamps alone do not
+establish precedence, and unlinked contradictions still require review.
+
+Substantive text outranks headings/tables; exact repeated statements are collapsed. This
+is not semantic deduplication. `--max-chars` now budgets statement text, with provenance
+metadata additional; `--limit` bounds returned records. `--explain` reports omitted matches
+and budget reasons. Validation proves retained evidence integrity, not truth or complete
+chat discovery. When a record mixes corrected and still-valid claims, write a replacement
+that preserves the valid limitations before linking it.
+
+
+## Bounded automatic refresh
+
+An opt-in worker and Fedora user timer are available; see
+[activation and controls](systemd/README.md). The policy starts paused and every
+source starts disabled. `refresh-status` shows actual worker-lock status, last
+successful capture, retry state and capacity. The worker coalesces changes,
+serialises writers, applies per-run limits, and preserves the published evidence
+when sources are unavailable or capacity is reached.
+
+Unchanged refreshes retain separate observation history but reference existing
+canonical content instead of copying it again. On the continuity pilot this reduced
+one refresh from 359,548 to 5,141 bytes (98.6%). No evidence is deleted. Full snapshots
+referenced by observations must remain available; archives materialise their content.
+[Refresh validation results](evaluations/refresh-results.json) distinguish fixture
+checks and a successful transient timer run from real-source activation.
+
+Long prose under explicit section headings can supply paragraph previews instead of
+only the record prefix. Each preview remains an exact substring of retained evidence
+with its original record identity and source range; JSON includes character offsets
+within that record. The400-character per-preview bound and section limits still
+apply. Ellipses/partial-record labels indicate omitted surrounding context; open the
+evidence before relying on qualifications. Omitted counts refer to preview candidates.
+
+Explicit limits such as “not independently verified” are shown as qualification
+caveats. These are cited source statements, not inferred failed gates or acceptance.
+A caveat paragraph may be selected directly when its own wording supplies that context.
+
+## Further documentation
 
 Saved source configuration, observation freshness and the explicit version-1 to
 version-2 store upgrade are documented in [source settings](docs/source-settings.md).

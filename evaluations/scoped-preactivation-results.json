@@ -1,0 +1,26 @@
+{
+  "commit": "9bdeadebddfcd1a999007d9e1229d6422ba113b0",
+  "snapshots_equal": 193,
+  "original_snapshot_hashes_checked": true,
+  "original_bytes": 171678566,
+  "copy_bytes_before_receipt": 102690871,
+  "copied_runtime": "ab1479f4ac517fc09ef8",
+  "copy_paused": true,
+  "state_read": {
+    "projects": 49,
+    "items": 762,
+    "truncated_projects": 0,
+    "copy_files_unchanged": true,
+    "actual_old_runtime_rejected": true
+  },
+  "source_writer": 3,
+  "copy_writer": 4,
+  "live_runtime": "227e5c7fbcf35d6bb8f6",
+  "live_derived_projects": 0,
+  "activated": false,
+  "limitations": [
+    "Live store has no state journals; receipt adoption/undo migration is covered by separate fixtures.",
+    "This copy ages as live captures proceed; do not activate without a fresh coherent cutover.",
+    "Readability and exact hashes do not establish semantic or owner acceptance."
+  ]
+}

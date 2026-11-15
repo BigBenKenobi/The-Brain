@@ -1,0 +1,142 @@
+{
+  "store": "/home/KenobiBigBen/Documents/The Brain/backups/compaction-v4-20261110/store",
+  "project_id": "42da5379-f9b0-4619-bf23-92005cbc72c9",
+  "baseline_code": "/home/KenobiBigBen/Documents/The Brain/backups/compaction-v4-20261110/code-95-tests",
+  "candidate_code": "/home/KenobiBigBen/Documents/The Brain",
+  "all_outputs_identical": true,
+  "cases": {
+    "no_foreign_technology": [
+      {
+        "before": {
+          "elapsed_seconds": 4.10685491701588,
+          "snapshot_loads": 49,
+          "distinct_projects_loaded": 49,
+          "results_sha256": "92d66bbc5be9a02938e0e3377595b24263ed99276749f290d5d55ac4e9ba3560",
+          "result_count": 2,
+          "max_rss_kib": 99304
+        },
+        "after": {
+          "elapsed_seconds": 0.008412894094362855,
+          "snapshot_loads": 1,
+          "distinct_projects_loaded": 1,
+          "results_sha256": "92d66bbc5be9a02938e0e3377595b24263ed99276749f290d5d55ac4e9ba3560",
+          "result_count": 2,
+          "max_rss_kib": 19252
+        }
+      },
+      {
+        "before": {
+          "elapsed_seconds": 4.11602820106782,
+          "snapshot_loads": 49,
+          "distinct_projects_loaded": 49,
+          "results_sha256": "92d66bbc5be9a02938e0e3377595b24263ed99276749f290d5d55ac4e9ba3560",
+          "result_count": 2,
+          "max_rss_kib": 98960
+        },
+        "after": {
+          "elapsed_seconds": 0.008046814939007163,
+          "snapshot_loads": 1,
+          "distinct_projects_loaded": 1,
+          "results_sha256": "92d66bbc5be9a02938e0e3377595b24263ed99276749f290d5d55ac4e9ba3560",
+          "result_count": 2,
+          "max_rss_kib": 19364
+        }
+      },
+      {
+        "before": {
+          "elapsed_seconds": 4.127459704061039,
+          "snapshot_loads": 49,
+          "distinct_projects_loaded": 49,
+          "results_sha256": "92d66bbc5be9a02938e0e3377595b24263ed99276749f290d5d55ac4e9ba3560",
+          "result_count": 2,
+          "max_rss_kib": 98808
+        },
+        "after": {
+          "elapsed_seconds": 0.008057570899836719,
+          "snapshot_loads": 1,
+          "distinct_projects_loaded": 1,
+          "results_sha256": "92d66bbc5be9a02938e0e3377595b24263ed99276749f290d5d55ac4e9ba3560",
+          "result_count": 2,
+          "max_rss_kib": 19484
+        }
+      }
+    ],
+    "sqlite": [
+      {
+        "before": {
+          "elapsed_seconds": 4.103977369959466,
+          "snapshot_loads": 49,
+          "distinct_projects_loaded": 49,
+          "results_sha256": "301eee933103ed22bd79dd7b75b000ab22f284e20a8477142d60153c19d8ab59",
+          "result_count": 3,
+          "max_rss_kib": 99052
+        },
+        "after": {
+          "elapsed_seconds": 0.008399410988204181,
+          "snapshot_loads": 2,
+          "distinct_projects_loaded": 2,
+          "results_sha256": "301eee933103ed22bd79dd7b75b000ab22f284e20a8477142d60153c19d8ab59",
+          "result_count": 3,
+          "max_rss_kib": 19392
+        }
+      },
+      {
+        "before": {
+          "elapsed_seconds": 4.204712659004144,
+          "snapshot_loads": 49,
+          "distinct_projects_loaded": 49,
+          "results_sha256": "301eee933103ed22bd79dd7b75b000ab22f284e20a8477142d60153c19d8ab59",
+          "result_count": 3,
+          "max_rss_kib": 98900
+        },
+        "after": {
+          "elapsed_seconds": 0.008340141968801618,
+          "snapshot_loads": 2,
+          "distinct_projects_loaded": 2,
+          "results_sha256": "301eee933103ed22bd79dd7b75b000ab22f284e20a8477142d60153c19d8ab59",
+          "result_count": 3,
+          "max_rss_kib": 19356
+        }
+      },
+      {
+        "before": {
+          "elapsed_seconds": 4.117159774061292,
+          "snapshot_loads": 49,
+          "distinct_projects_loaded": 49,
+          "results_sha256": "301eee933103ed22bd79dd7b75b000ab22f284e20a8477142d60153c19d8ab59",
+          "result_count": 3,
+          "max_rss_kib": 99036
+        },
+        "after": {
+          "elapsed_seconds": 0.008687012013979256,
+          "snapshot_loads": 2,
+          "distinct_projects_loaded": 2,
+          "results_sha256": "301eee933103ed22bd79dd7b75b000ab22f284e20a8477142d60153c19d8ab59",
+          "result_count": 3,
+          "max_rss_kib": 19540
+        }
+      }
+    ]
+  },
+  "limitations": [
+    "Local elapsed times are observations, not a universal latency guarantee.",
+    "Each sample uses a fresh interpreter; filesystem caches may still be warm.",
+    "Invalid approvals are now ignored as non-authorizing; this comparison covers the retained valid store."
+  ],
+  "tests_passed": 101,
+  "source_sha256": {
+    "brain/core.py": "64c0f0cc8f5f2351d30355f3f28814e3a19a55cf398165654c72fbb0ae0f74b9",
+    "tests/test_retrieval_scope.py": "dc89689310c59cbe8f66915d637eb9e4f6ed34786d7746c045f0e9a8c81c89e5",
+    "scripts/benchmark_retrieval_scope.py": "a514d3ce43759da6889a260670d125ffceb8a4dd4b4938fb7e98324629b458ff"
+  },
+  "medians": {
+    "no_foreign_technology": {
+      "before": 4.11602820106782,
+      "after": 0.008057570899836719
+    },
+    "sqlite": {
+      "before": 4.117159774061292,
+      "after": 0.008399410988204181
+    }
+  }
+}

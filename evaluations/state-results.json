@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-10",
+  "python": "3.14.10",
+  "command": "python3 -m unittest discover -s tests",
+  "tests_passed": 77,
+  "scope": "deterministic state foundation, not complete milestone 4",
+  "sha256": {
+    "brain/state.py": "25edba5e7b2a7730d0ec9dcfbfa442fdbfe8847f21701d5b571de9e5dc8baa29",
+    "brain/core.py": "d34fd060db1c7a16c9b6fc8b694061c69654a2e90045ac9c1f5507a262a1dbb5",
+    "brain/briefing.py": "eb4afbcb17356267c6cada8e4c0d5584ab165192827be7b37d09ea98eeb4e97e",
+    "brain/__main__.py": "121c2398d5d505000e4ebb7a89443e136403b657e275b7b9952d7d4a4fb06adc",
+    "tests/test_state.py": "e1bf36d0b06a438e5ee5a27a6ebf1c9dc9902eec05e6cd082dfcb8ad2f439158",
+    "tests/test_briefing.py": "a10934f3675e6870d8b8a074d28a2a7789e424497d00f4beb801eedd12b8bc19"
+  },
+  "scheduled_runtime_unchanged": "227e5c7fbcf35d6bb8f6"
+}

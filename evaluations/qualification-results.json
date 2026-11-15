@@ -1,0 +1,56 @@
+{
+  "tests": {
+    "3.11.18": 124,
+    "3.14.10": 124
+  },
+  "first_project": {
+    "current": [
+      5,
+      5
+    ],
+    "unchanged": [
+      5,
+      5
+    ],
+    "vision": [
+      2,
+      2
+    ],
+    "held_out": [
+      3,
+      3
+    ]
+  },
+  "second_project": [
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      4,
+      5
+    ]
+  ],
+  "retired_gate_caveat_visible": true,
+  "all_model_input_reference_phrases_present": true,
+  "canonical_data_modified": false,
+  "published": false,
+  "artifacts": [
+    "evaluations/runs/2026-11-10/replay-qualification/report.json",
+    "evaluations/runs/2026-11-10/tinker-qualification/report.json",
+    "evaluations/runs/2026-11-10/model-input-qualification/preparation-report.json"
+  ],
+  "sha256": {
+    "brain/briefing.py": "f5c27b5a6514919c870cdc4a57b8e7f358548415e7cc9f7cb97c987ef6076098",
+    "tests/test_qualification_caveats.py": "a9281a8754c1f58c1059d8ba57d2e117a793dfe93e030a0591607af93a42cab2"
+  },
+  "limitations": [
+    "Lexical caveats and quote attribution do not establish semantic interpretation or acceptance.",
+    "Other Tinker qualification and connectivity misses remain.",
+    "No model inference, release deployment or native owner acceptance."
+  ]
+}

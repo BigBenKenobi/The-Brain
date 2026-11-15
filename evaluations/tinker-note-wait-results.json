@@ -1,0 +1,80 @@
+{
+  "commit": "0f0b9bdd44fa61cef20aaee53ff26d11c8d3c8ee",
+  "pr": "https://github.com/BigBenKenobi/Tinker/pull/70",
+  "scope": "test completion observation only; runtime modules unchanged",
+  "reproduction": "Delayed terminal delivery: 1 failed, 5 passed at the original assertion before the wait fix",
+  "after": "89 Note/Project assistant/memory tests passed in21.33s on Python3.11.18",
+  "original_assertions_retained": true,
+  "timeout_unchanged": true,
+  "published": true,
+  "hosted_checks": "success",
+  "original_worktree_modified": false,
+  "hosted_run": 42805111608,
+  "hosted_event": "push",
+  "hosted_jobs": [
+    {
+      "id": 129792130428,
+      "python": "3.11",
+      "conclusion": "success",
+      "checkout_tests": 1842,
+      "source_archive_tests": 1842,
+      "installed_checks": "passed"
+    },
+    {
+      "id": 129792130377,
+      "python": "3.12",
+      "conclusion": "success",
+      "checkout_tests": 1842,
+      "source_archive_tests": 1842,
+      "installed_checks": "passed"
+    },
+    {
+      "id": 129792129806,
+      "python": "3.14",
+      "conclusion": "success",
+      "checkout_tests": 1842,
+      "source_archive_tests": 1842,
+      "installed_checks": "passed"
+    }
+  ],
+  "reconciliation": {
+    "commit": "a11d51f4684a657392061579464cca1bd8100dea",
+    "main": "eb8ec7f0ac607cc25affa58730ae2fccad7801e6",
+    "reason": "Main independently strengthened the same Note test; preserve specific rejection assertion and add delayed delivery coverage",
+    "focused_tests": 89,
+    "elapsed_seconds": 21.14,
+    "merge_tree": "clean",
+    "published": true,
+    "hosted_checks": "success",
+    "hosted_run": 42806837566,
+    "superseded_push_run": 42806830738,
+    "superseded_push_result": "cancelled",
+    "cancellation_recovery": "Forced cancellation of superseded push run42806830738 after normal concurrency cancellation left Python3.12 in_progress with no active step. Existing queued PR run42806837566 then started; no workflow restart.",
+    "hosted_jobs": [
+      {
+        "id": 129800375085,
+        "python": "3.11",
+        "conclusion": "success",
+        "checkout_tests": 1863,
+        "source_archive_tests": 1863,
+        "installed_checks": "passed"
+      },
+      {
+        "id": 129800374239,
+        "python": "3.12",
+        "conclusion": "success",
+        "checkout_tests": 1863,
+        "source_archive_tests": 1863,
+        "installed_checks": "passed"
+      },
+      {
+        "id": 129800373777,
+        "python": "3.14",
+        "conclusion": "success",
+        "checkout_tests": 1863,
+        "source_archive_tests": 1863,
+        "installed_checks": "passed"
+      }
+    ]
+  }
+}

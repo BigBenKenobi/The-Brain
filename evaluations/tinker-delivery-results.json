@@ -1,0 +1,146 @@
+{
+  "repository": "BigBenKenobi/Tinker",
+  "base": "424d1b52b69147a3ff29d32b3c2721e3b1d70109",
+  "commit": "6e3987dcddfcb3280707c47afec72691be0d0071",
+  "branch": "codex/project-memory",
+  "source_tests": 52,
+  "installed_memory_tests": 9,
+  "sandbox_observation": "44 passed; 8 fake transport readiness timeouts. All52 passed with local fixture process/socket access.",
+  "python": "3.11.18",
+  "pyside6": "6.11.3",
+  "integration": {
+    "expanded_view_reveals_omitted_context": true,
+    "detail_change_requires_reload": true,
+    "revoke_restores_brief": true,
+    "consolidation_conflict_visible": true,
+    "grouped_support_evidence_loaded": true,
+    "configuration_section_visible": true,
+    "real_cli_project_list": true,
+    "briefing_loaded": true,
+    "retained_evidence_loaded": true,
+    "store_byte_unchanged": true,
+    "model_context_unchanged": true,
+    "owner_revoke_cleared": true,
+    "qt": "6.11.3",
+    "mode": "offscreen",
+    "installed_packages": true,
+    "imports": {
+      "brain": "/tmp/brain-tinker-ui-env/lib/python3.11/site-packages/brain/core.py",
+      "tinker_memory": "/tmp/brain-tinker-ui-env/lib/python3.11/site-packages/ui/project_memory.py"
+    }
+  },
+  "runtime_wheel_matches_commit": true,
+  "wheel_sha256": {
+    "project_brain_local-0.1.0-py3-none-any.whl": "2a0d0216e12f9d7cad8235247007a0f242cae06f9f96f294cdc4f1b14b949087",
+    "tinker-0.1.0-py3-none-any.whl": "d4280444c3db53c1825ab4914c054f3e30869542888ed343a8cb9efd48258033"
+  },
+  "bundle_verified": true,
+  "unrelated_worktree_changes_included": false,
+  "publication": "Published with explicit user approval; draft PR70 open and unmerged.",
+  "limits": [
+    "Offscreen Qt validation, not native acceptance.",
+    "No real model inference or owner resumption measurement.",
+    "No merge or deployment."
+  ],
+  "pr": "https://github.com/BigBenKenobi/Tinker/pull/70",
+  "remote_base": "eb8ec7f0ac607cc25affa58730ae2fccad7801e6",
+  "merge_tree_conflict_check": "clean",
+  "hosted_run": 42802654326,
+  "hosted_initial_failure": {
+    "job": 129783946106,
+    "python": "3.12",
+    "test": "tests/test_note_chat.py::test_note_bounds_preserve_complete_unsent_draft[tokens]",
+    "result": "1 failed, 1838 passed; new memory tests all passed",
+    "observation": "DocumentAdmission.pending was still true after the test waited on runtime.attempt and auto_search.active only",
+    "changed_by_pr": false,
+    "local_targeted_python311": "1 passed in 0.35s",
+    "cause": "Timing issue plausible, not conclusively established"
+  },
+  "hosted_successful_initial_jobs": [
+    {
+      "python": "3.11",
+      "job": 129783946451,
+      "checkout_tests": 1839,
+      "source_archive_tests": 1839,
+      "installed_checks": "passed"
+    },
+    {
+      "python": "3.14",
+      "job": 129783946486,
+      "checkout_tests": 1839,
+      "source_archive_tests": 1839,
+      "installed_checks": "passed"
+    }
+  ],
+  "hosted_retry": {
+    "job": 129788498982,
+    "python": "3.12",
+    "status": "completed",
+    "source_changed": false,
+    "conclusion": "failure",
+    "result": "Same Note-chat token assertion; 1838 passed, 1 failed"
+  },
+  "current_head": "a11d51f4684a657392061579464cca1bd8100dea",
+  "followup_receipt": "evaluations/tinker-note-wait-results.json",
+  "previous_head_hosted": {
+    "run": 42805111608,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 129792130428,
+        "python": "3.11",
+        "conclusion": "success",
+        "checkout_tests": 1842,
+        "source_archive_tests": 1842,
+        "installed_checks": "passed"
+      },
+      {
+        "id": 129792130377,
+        "python": "3.12",
+        "conclusion": "success",
+        "checkout_tests": 1842,
+        "source_archive_tests": 1842,
+        "installed_checks": "passed"
+      },
+      {
+        "id": 129792129806,
+        "python": "3.14",
+        "conclusion": "success",
+        "checkout_tests": 1842,
+        "source_archive_tests": 1842,
+        "installed_checks": "passed"
+      }
+    ]
+  },
+  "current_head_hosted": {
+    "run": 42806837566,
+    "commit": "a11d51f4684a657392061579464cca1bd8100dea",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 129800375085,
+        "python": "3.11",
+        "conclusion": "success",
+        "checkout_tests": 1863,
+        "source_archive_tests": 1863,
+        "installed_checks": "passed"
+      },
+      {
+        "id": 129800374239,
+        "python": "3.12",
+        "conclusion": "success",
+        "checkout_tests": 1863,
+        "source_archive_tests": 1863,
+        "installed_checks": "passed"
+      },
+      {
+        "id": 129800373777,
+        "python": "3.14",
+        "conclusion": "success",
+        "checkout_tests": 1863,
+        "source_archive_tests": 1863,
+        "installed_checks": "passed"
+      }
+    ]
+  }
+}

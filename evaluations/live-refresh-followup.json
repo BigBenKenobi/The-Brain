@@ -1,0 +1,119 @@
+{
+  "checked_at": "2026-11-10T09:58:55.672648+00:00",
+  "systemd_observation": {
+    "timer": "active/waiting",
+    "last_trigger_local": "2026-11-10 20:56:03 AEDT",
+    "service_result": "success",
+    "exit_status": 0
+  },
+  "store_writer": 3,
+  "pinned_runtime": "227e5c7fbcf35d6bb8f6",
+  "pinned_hashes_match": true,
+  "enabled_source_ids": [
+    "c0124389-159b-4733-af8e-30503e87fb00"
+  ],
+  "source_id": "c0124389-159b-4733-af8e-30503e87fb00",
+  "project_id": "42da5379-f9b0-4619-bf23-92005cbc72c9",
+  "policy": {
+    "interval_seconds": 900,
+    "max_bytes_per_run": 8388608,
+    "max_files_per_run": 2000,
+    "max_retry_seconds": 3600,
+    "max_run_seconds": 30,
+    "max_sources_per_run": 4,
+    "max_store_bytes": 1073741824,
+    "paused": false,
+    "retry_seconds": 60
+  },
+  "worker_state": {
+    "last_run": {
+      "attempted_at": 1794304683.5985162,
+      "finished_at": 1794304683.5986876,
+      "processed": 0
+    },
+    "sources": {
+      "c0124389-159b-4733-af8e-30503e87fb00": {
+        "failures": 0,
+        "last_attempt_at": 1794303903.5732043,
+        "last_finished_at": 1794303903.5967584,
+        "last_success_at": 1794303903.5967603,
+        "next_due": 1794304803.5732043,
+        "observation_only": false,
+        "snapshot": "387dffaa-22c7-456e-b9cc-74f40f0ae660",
+        "state": "idle"
+      }
+    }
+  },
+  "snapshot_validation": {
+    "valid": true,
+    "records": 39,
+    "relationship_warnings": []
+  },
+  "source_snapshots": [
+    {
+      "time": 1794296208.0434785,
+      "id": "e413334b-9682-4363-8f79-928367706673",
+      "format": "full",
+      "bytes": 67165
+    },
+    {
+      "time": 1794297005.376628,
+      "id": "4ee7c98e-a59c-4c9e-9698-341192bbe570",
+      "format": "full",
+      "bytes": 77619
+    },
+    {
+      "time": 1794298323.3744192,
+      "id": "ebc6edca-3dc6-4762-9f3a-37ecf3182508",
+      "format": "observation-1",
+      "bytes": 3766
+    },
+    {
+      "time": 1794299223.4181826,
+      "id": "e3b69e10-2833-4d54-8357-fd333a28da90",
+      "format": "full",
+      "bytes": 90275
+    },
+    {
+      "time": 1794300123.4505007,
+      "id": "26c549d4-b2bd-476b-b33c-93d30674b3a1",
+      "format": "full",
+      "bytes": 99594
+    },
+    {
+      "time": 1794301143.4766083,
+      "id": "553760a6-5a10-4bea-aea3-27ce13ab915c",
+      "format": "observation-1",
+      "bytes": 4415
+    },
+    {
+      "time": 1794302043.51632,
+      "id": "3fa901fd-2dc8-43b7-95bf-1bc023cad0d9",
+      "format": "full",
+      "bytes": 121960
+    },
+    {
+      "time": 1794302943.549374,
+      "id": "20e6abe5-8a8c-4828-94d3-01008a78b7ee",
+      "format": "full",
+      "bytes": 141071
+    },
+    {
+      "time": 1794303903.579963,
+      "id": "387dffaa-22c7-456e-b9cc-74f40f0ae660",
+      "format": "full",
+      "bytes": 168862
+    }
+  ],
+  "retained_note_count": 14,
+  "pending_notes": [
+    "20261110T094616Z-4ec8cc93.md",
+    "20261110T095233Z-33c9eb3b.md",
+    "20261110T095608Z-f7c70b61.md"
+  ],
+  "limits": [
+    "Read-only observation; no forced capture or service changes.",
+    "Captured history supports repeated unattended operation, not hardware sleep/reboot acceptance.",
+    "Failure injection tests are disposable fixtures, not live-store disruptions."
+  ]
+}

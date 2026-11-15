@@ -1,0 +1,80 @@
+{
+  "tinker_commit": "a11d51f4684a657392061579464cca1bd8100dea",
+  "brain_commit": "9ab32d0ed69cd7e29a236725f7f9cfd25d4109dd",
+  "installed_focused_tests": 9,
+  "runtime_wheel_matches_commit": true,
+  "bundle_verified": true,
+  "integration": {
+    "expanded_view_reveals_omitted_context": true,
+    "detail_change_requires_reload": true,
+    "revoke_restores_brief": true,
+    "consolidation_conflict_visible": true,
+    "grouped_support_evidence_loaded": true,
+    "configuration_section_visible": true,
+    "real_cli_project_list": true,
+    "briefing_loaded": true,
+    "retained_evidence_loaded": true,
+    "store_byte_unchanged": true,
+    "model_context_unchanged": true,
+    "owner_revoke_cleared": true,
+    "qt": "6.11.3",
+    "mode": "offscreen",
+    "installed_packages": true,
+    "imports": {
+      "brain": "/tmp/brain-tinker-ui-env/lib/python3.11/site-packages/brain/core.py",
+      "tinker_memory": "/tmp/brain-tinker-ui-env/lib/python3.11/site-packages/ui/project_memory.py"
+    }
+  },
+  "screenshot_reviewed": true,
+  "hosted_run": 42806837566,
+  "hosted_status": "success",
+  "limitations": [
+    "Offscreen fixture, not native KDE acceptance.",
+    "No owner resumption or real text-model evaluation.",
+    "Only disposable stores and isolated installed packages used."
+  ],
+  "artifacts": {
+    "tinker-reconciled-memory.png": "1b226f3f9de42afade8cc56344b92223c0b13f25a5ea8648bf5f3b8264dbc785",
+    "tinker-reconciled-memory.json": "de0e8ff6b1168d52e1f50883a5d7cdf5cf09c5acf4c960497bf2371aa2fa663e",
+    "tinker-reconciled-build.log": "f394ba6bf4a2e874eccddd72be0e9c71b0c4f6c71d3336b904a94dc980a2821e",
+    "tinker-0.1.0-py3-none-any.whl": "54d1af5f45e8b8c300d4ca6da96d58ba524e4b3ce8cd8a9681e919bdb54d0778",
+    "project_brain_local-0.1.0-py3-none-any.whl": "15f8aa66c9bf33f12715b0f8acc3c40cd3d3f2f19ea855070f6a3e108f2ff8b3",
+    "tinker-reconciled.bundle": "16c9793f7e057ca91251eb5c68ddd9e0f636b8d1551e0a17f0979c88c65ded7c",
+    "bundle-verify.txt": "573c72ab6227fc1588597a17585ec26562dde39918d820e08bf8edb053709974",
+    "review.diff": "30b28049dbcb4f3f524e45f2371af33472f7345107d1c9413ba4b33dadf1d658",
+    "hosted-129800373777-summary.log": "b1bd90d5bd49eee5aea02fb941ba0503639db15470e9ef48519358de82972d13",
+    "hosted-129800374239-summary.log": "7327011aa8b1456858dfee362b4ea5db66c8349998e15e670ec45eabfcd3ad1c",
+    "hosted-129800375085-summary.log": "c974784e95d701dc5b1f8c57c5ba9c615dcc78c0f2ea94d0a955d56d38b9eede"
+  },
+  "hosted": {
+    "run": 42806837566,
+    "commit": "a11d51f4684a657392061579464cca1bd8100dea",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 129800375085,
+        "python": "3.11",
+        "conclusion": "success",
+        "checkout_tests": 1863,
+        "source_archive_tests": 1863,
+        "installed_checks": "passed"
+      },
+      {
+        "id": 129800374239,
+        "python": "3.12",
+        "conclusion": "success",
+        "checkout_tests": 1863,
+        "source_archive_tests": 1863,
+        "installed_checks": "passed"
+      },
+      {
+        "id": 129800373777,
+        "python": "3.14",
+        "conclusion": "success",
+        "checkout_tests": 1863,
+        "source_archive_tests": 1863,
+        "installed_checks": "passed"
+      }
+    ]
+  }
+}

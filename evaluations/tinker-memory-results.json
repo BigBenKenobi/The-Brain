@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-10",
+  "consumer": "Tinker Project workspace",
+  "tinker_root": "/home/KenobiBigBen/Tinker (Development)",
+  "tinker_test_command": "QT_QPA_PLATFORM=offscreen PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider tests/test_project_memory.py tests/test_project_assistant.py",
+  "tests_passed": 50,
+  "focused_memory_tests": 7,
+  "python": "3.11.18",
+  "pyside6": "6.11.3",
+  "sandboxed_run": {
+    "passed": 42,
+    "failed": 8,
+    "reason": "Existing model transport fixtures did not reach Ready; all 50 passed with local subprocess/socket access."
+  },
+  "real_cli_trial": {
+    "real_cli_project_list": true,
+    "briefing_loaded": true,
+    "retained_evidence_loaded": true,
+    "store_byte_unchanged": true,
+    "model_context_unchanged": true,
+    "owner_revoke_cleared": true,
+    "qt": "6.11.3",
+    "mode": "offscreen"
+  },
+  "tinker_sha256": {
+    "ui/project.py": "6b0becbf4944d6761730217177cb080b904ca42f53019155ec71d41e42d66b05",
+    "ui/project_memory.py": "75e1af5154d22d09da631a76caec743d56d40b8dd88db8773d4ead96345ea8fa",
+    "tests/test_project_memory.py": "8841bc772e40a8b4fdb4cfd73c89ff73bbca931a398b0ac79d4dff935362656a",
+    "docs/PROJECT_MEMORY.md": "4f0cad6d26a44b55e86216db7e80e8ca2a51e733f69d5d7fb2dcd1618054e981",
+    "docs/PROJECT_ASSISTANT.md": "dffa8276cb556ffdb29cc2ef11212f1dfe34a9e8468a3539ac121e084e9dcebb"
+  },
+  "limitations": [
+    "Offscreen Qt and disposable-store verification, not native desktop acceptance.",
+    "Tinker checkout had existing unrelated edits; no commit or publication performed.",
+    "Brain remains separately installed; no hosting-device SSH or model evaluation attempted.",
+    "No second real-project source was ingested."
+  ],
+  "final_label_change": "Human-readable availability labels; seven focused tests and real CLI trial repeated."
+}

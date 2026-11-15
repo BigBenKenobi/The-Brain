@@ -1,0 +1,70 @@
+{
+  "inference_run": false,
+  "model_selected": false,
+  "source_corpus": "/home/KenobiBigBen/Documents/The Brain/evaluations/runs/2026-11-10/baseline",
+  "checkpoints": {
+    "01-main": {
+      "input_sha256": "218557ac6053ff92e477094a4d9c113fe187c7e2685266b9daf2eda51ddecf1f",
+      "records": 16,
+      "text_chars": 13181,
+      "omitted": 0,
+      "answer_key_phrase_in_input": {
+        "continuity objective": true
+      }
+    },
+    "02-briefing-pr": {
+      "input_sha256": "703ea6431b5042dc46c5fe84aee50ba4b75bff2158ac280b3db534b0025a2785",
+      "records": 23,
+      "text_chars": 23209,
+      "omitted": 1,
+      "answer_key_phrase_in_input": {
+        "continuity objective": true,
+        "purposeful memory": true
+      }
+    },
+    "03-local": {
+      "input_sha256": "8540220ae9c32251697feb1709a121baa7cf4237b511f936175fb42f3c6b7a29",
+      "records": 24,
+      "text_chars": 21501,
+      "omitted": 51,
+      "answer_key_phrase_in_input": {
+        "duplicate correction": true,
+        "future work": true,
+        "failed approach": true,
+        "unfinished idea": true,
+        "attributable run": true
+      }
+    },
+    "04-unchanged": {
+      "input_sha256": "829609b3b0c200e4a743b7657678ae6256c75a332723d2467cad3c857af2d4f8",
+      "records": 24,
+      "text_chars": 21501,
+      "omitted": 51,
+      "answer_key_phrase_in_input": {
+        "duplicate correction": true,
+        "future work": true,
+        "failed approach": true,
+        "unfinished idea": true,
+        "attributable run": true
+      }
+    },
+    "06-held-out": {
+      "input_sha256": "d3110924264d1a270992102df2320efbbb071d2c74a096fa81e14716a79427cc",
+      "records": 4,
+      "text_chars": 267,
+      "omitted": 11,
+      "answer_key_phrase_in_input": {
+        "decision rationale": true,
+        "unresolved blocker": true,
+        "proposal": true
+      }
+    }
+  },
+  "limitations": [
+    "Phrase presence measures input coverage, not extraction quality or factual support.",
+    "Answers remain outside model inputs. Actual host inference, latency and memory measurement are pending.",
+    "Hosting device SSH work deferred at user request."
+  ],
+  "tests_passed": 85,
+  "cli_contract_fixture_passed": true
+}

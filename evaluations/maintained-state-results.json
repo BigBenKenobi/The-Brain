@@ -1,0 +1,176 @@
+{
+  "comparisons": {
+    "01-main": {
+      "checks": {
+        "continuity objective": {
+          "balanced_display": false,
+          "in_full_state": false,
+          "previous_display": false
+        }
+      },
+      "claims_traced": 10,
+      "displayed": 10,
+      "displayed_kinds": [
+        "attempt",
+        "blocker",
+        "decision",
+        "idea"
+      ],
+      "omitted": 0,
+      "private_canary_absent": true,
+      "total_items": 10
+    },
+    "02-briefing-pr": {
+      "checks": {
+        "continuity objective": {
+          "balanced_display": false,
+          "in_full_state": true,
+          "previous_display": false
+        },
+        "purposeful memory": {
+          "balanced_display": false,
+          "in_full_state": true,
+          "previous_display": false
+        }
+      },
+      "claims_traced": 20,
+      "displayed": 20,
+      "displayed_kinds": [
+        "attempt",
+        "blocker",
+        "decision",
+        "idea"
+      ],
+      "omitted": 1,
+      "private_canary_absent": true,
+      "total_items": 21
+    },
+    "03-local": {
+      "checks": {
+        "attributable run": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": false
+        },
+        "duplicate correction": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": true
+        },
+        "failed approach": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": false
+        },
+        "future work": {
+          "balanced_display": false,
+          "in_full_state": true,
+          "previous_display": false
+        },
+        "unfinished idea": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": true
+        }
+      },
+      "claims_traced": 20,
+      "displayed": 20,
+      "displayed_kinds": [
+        "attempt",
+        "blocker",
+        "decision",
+        "idea"
+      ],
+      "omitted": 30,
+      "private_canary_absent": true,
+      "total_items": 50
+    },
+    "04-unchanged": {
+      "checks": {
+        "attributable run": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": false
+        },
+        "duplicate correction": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": true
+        },
+        "failed approach": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": false
+        },
+        "future work": {
+          "balanced_display": false,
+          "in_full_state": true,
+          "previous_display": false
+        },
+        "unfinished idea": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": true
+        }
+      },
+      "claims_traced": 20,
+      "displayed": 20,
+      "displayed_kinds": [
+        "attempt",
+        "blocker",
+        "decision",
+        "idea"
+      ],
+      "omitted": 30,
+      "private_canary_absent": true,
+      "total_items": 50
+    },
+    "06-held-out": {
+      "checks": {
+        "decision rationale": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": true
+        },
+        "proposal": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": true
+        },
+        "unresolved blocker": {
+          "balanced_display": true,
+          "in_full_state": true,
+          "previous_display": true
+        }
+      },
+      "claims_traced": 3,
+      "displayed": 3,
+      "displayed_kinds": [
+        "blocker",
+        "decision",
+        "idea"
+      ],
+      "omitted": 0,
+      "private_canary_absent": true,
+      "total_items": 3
+    }
+  },
+  "limitations": [
+    "Phrase checks measure visibility, not semantic accuracy.",
+    "Objectives belong primarily to briefing sections, not the four maintained item kinds.",
+    "Absence extension is simulated against copied real-history inputs.",
+    "Human resumption, model evaluation and a second real project remain pending."
+  ],
+  "original_corpus_unchanged": true,
+  "synthetic_absence_extension": {
+    "captures": 10,
+    "claims_traced": true,
+    "history_scan_budget": 1,
+    "items_preserved": 3,
+    "stages_and_currency_unchanged": true
+  },
+  "python_test_runs": {
+    "3.14.10": 103,
+    "3.11.18": 103
+  }
+}

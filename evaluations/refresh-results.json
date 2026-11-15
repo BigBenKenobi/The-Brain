@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-10",
+  "unit_tests": 64,
+  "same_corpus_storage": {
+    "full_snapshot_bytes": 359548,
+    "observation_bytes": 5141,
+    "reduction_fraction": 0.9857014918731296,
+    "materialised_valid": true,
+    "archive_verified": true
+  },
+  "v3_migration_copy": {
+    "historical_snapshots_validated": 178,
+    "unchanged_except_config": true,
+    "observation_refresh_valid": true,
+    "v2_writer_rejected": true
+  },
+  "systemd": {
+    "unit_verification": "passed",
+    "transient_test_unit": "brain-refresh-acceptance-y1l2syl",
+    "service_result": "success",
+    "exit_status": 0,
+    "changed_evidence_captured": true,
+    "snapshot_valid": true,
+    "fixture": "/tmp/brain-timer-acceptance-y1l2syl_",
+    "transient_units_unloaded": true,
+    "cleanup": "Explicit stop reported both units already not loaded; systemd had removed the completed transient units."
+  },
+  "real_source_activation": {
+    "approved_by_user": true,
+    "source_id": "c0124389-159b-4733-af8e-30503e87fb00",
+    "interval_seconds": 900,
+    "max_store_bytes": 1073741824,
+    "first_scheduled_capture_verified": true,
+    "service_result": "success",
+    "service_exit_status": 0,
+    "only_one_source_enabled": true,
+    "pinned_runtime": "227e5c7fbcf35d6bb8f6",
+    "milestone_note": {
+      "automatically_captured": true,
+      "snapshot": "e3b69e10-2833-4d54-8357-fd333a28da90",
+      "retained_evidence_verified": true,
+      "snapshot_valid": true,
+      "scoped_retrieval_verified": true
+    }
+  }
+}

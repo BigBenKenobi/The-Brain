@@ -1,0 +1,61 @@
+{
+  "change": "Bounded exact paragraph previews under explicit source headings",
+  "tests": {
+    "Python 3.11.18": 122,
+    "Python 3.14.10": 122,
+    "Tinker focused Qt tests": 8
+  },
+  "first_project": {
+    "expanded_vision_before": [
+      0,
+      2
+    ],
+    "expanded_vision_after": [
+      2,
+      2
+    ],
+    "current": [
+      5,
+      5
+    ],
+    "unchanged": [
+      5,
+      5
+    ],
+    "held_out": [
+      3,
+      3
+    ]
+  },
+  "second_project": [
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      5
+    ]
+  ],
+  "first_replay": "evaluations/runs/2026-11-10/replay-preview-final/report.json",
+  "second_replay": "evaluations/runs/2026-11-10/tinker-preview-final/report.json",
+  "canonical_records_rewritten": false,
+  "display_chars_per_item": 400,
+  "source_spans_preserved": true,
+  "proposal_status_unchanged": true,
+  "limitations": [
+    "Paragraph emphasis is a deterministic presentation signal, not semantic verification.",
+    "Whole-record citations provide surrounding qualifications; partial previews are labelled.",
+    "Unheaded prose, code, configuration and fenced blocks keep prior contiguous preview behavior.",
+    "Tinker retired-gate and some qualification misses remain.",
+    "Source changes only; installed validation wheels from the preceding milestone and live pinned runtime are unchanged."
+  ],
+  "sha256": {
+    "brain/briefing.py": "2b4d438f50aed8cd5943a33f4dcddf95e648e566a0c4e61cd3b88cc337e30dbf",
+    "tests/test_briefing_previews.py": "187eb017ceb19a2e62f84dd3154e938d6b34a297c461d8e676477df3eccd2dd4"
+  }
+}

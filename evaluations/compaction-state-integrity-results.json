@@ -1,0 +1,20 @@
+{
+  "tests": {
+    "3.11.18": 128,
+    "3.14.10": 128
+  },
+  "new_regressions": 4,
+  "before": "Missing published event and invalid catalogue reference were accepted; grouped copy lacked a state-verification receipt field.",
+  "after": {
+    "grouping_conflict_and_undo_preserved": true,
+    "missing_published_event_rejected": true,
+    "missing_catalogue_record_rejected": true,
+    "undone_event_evidence_hash_mismatch_rejected": true,
+    "original_store_unchanged": true
+  },
+  "scope": "Disposable fixtures; no live compaction or activation. All published journal references and active catalogue references are validated independently of display budgets; bounded replay fingerprints compared across copy.",
+  "sha256": {
+    "brain/storage.py": "12a2abcfae1459ae943ce16c10e7164aabce534665110e8c512f73d8be29e670",
+    "tests/test_storage.py": "dadc274786d39c21a5f151b5c3f05b06ef5d758080701bf61f6a73c310065b6d"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "commit": "5c6ceaf2941a18c102153c2165074dc7f1f3d784",
+  "branch": "codex/maintained-project-state",
+  "base": "b76062b0e216c65f61d74fe5c95cf23f2a13486a",
+  "tests": {
+    "3.11.18": 86,
+    "3.14.10": 86
+  },
+  "pilot": {
+    "implementation": "/tmp/brain-state-delivery/brain/core.py",
+    "immutable_original": true,
+    "checkpoints": {
+      "01-main": {
+        "hits": 1,
+        "total": 1,
+        "traceability": true,
+        "state_items": 3
+      },
+      "02-briefing-pr": {
+        "hits": 2,
+        "total": 2,
+        "traceability": true,
+        "state_items": 3
+      },
+      "03-local": {
+        "hits": 5,
+        "total": 5,
+        "traceability": true,
+        "state_items": 3
+      },
+      "04-unchanged": {
+        "hits": 5,
+        "total": 5,
+        "traceability": true,
+        "state_items": 3
+      },
+      "06-held-out": {
+        "hits": 3,
+        "total": 3,
+        "traceability": true,
+        "state_items": 3
+      }
+    },
+    "scope": "Exact baseline snapshots replayed in a disposable copy. Phrase matches and quote attribution do not establish semantic acceptance."
+  },
+  "store_writer": 3,
+  "journal_reader": 1,
+  "excluded": [
+    "local model adapter",
+    "offline model boundary",
+    "writer4 blobs",
+    "journal2 support consolidation",
+    "Tinker consumer"
+  ],
+  "publication": "Published with explicit user approval; draft PR5 open and unmerged.",
+  "live_runtime_changed": false,
+  "bundle_verified": true,
+  "artifacts": {
+    "state.bundle": "23bab97bccee64510fb68e606859d36e4e226b63a1327350853cc9927775ffb2",
+    "state.patch": "d6d78d7f61c4e77c928c382c60de1e44e8ce79cc0e7c518062e406b43dc77cdf",
+    "python314.log": "67c241b7b6f7a54b2aebeb38d4fa6e01870dc4e149b3b3846f562aad8425c928",
+    "python311.log": "8501183e0f817f479943c9dea0d062be9ad1a4bf2508a14784df0be75d7a0e30",
+    "pilot.json": "80d7e59d4154c8d8908462c1d4043284bafa90bca0ae1612813e73592d76d401"
+  },
+  "pr": "https://github.com/BigBenKenobi/The-Brain/pull/5",
+  "hosted_checks": {
+    "run_id": 42799274286,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 129772317816,
+        "python": "3.11",
+        "conclusion": "success"
+      },
+      {
+        "id": 129772318384,
+        "python": "3.14",
+        "conclusion": "success"
+      }
+    ]
+  }
+}

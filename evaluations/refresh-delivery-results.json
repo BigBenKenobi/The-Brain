@@ -1,0 +1,43 @@
+{
+  "commit": "b76062b0e216c65f61d74fe5c95cf23f2a13486a",
+  "branch": "codex/bounded-local-refresh",
+  "base": "a4a0b3669d456b919367054e9b715354e6dc2432",
+  "package_matches_pinned_runtime": "227e5c7fbcf35d6bb8f6",
+  "tests": {
+    "Python 3.11.18": 64,
+    "Python 3.14.10": 64
+  },
+  "systemd_analyze_user_verify": "pass; inspected templates only",
+  "installer_fixture": {
+    "idempotent_pin": true,
+    "pinned_cli_read": true,
+    "default_paused": true,
+    "altered_runtime_rejected": true
+  },
+  "publication": "Published with explicit user approval; draft PR4 open and unmerged.",
+  "live_service_changed": false,
+  "bundle_verified": true,
+  "artifacts": {
+    "refresh.bundle": "9ddaf254f0fcfb6c6a3da34c089d2cff8286ede9c746f132d5c82ae9fd186299",
+    "refresh.patch": "b23c45b682117ecef4712ac7b4ad304995d511ec689d1c2447088a25d0480e1f",
+    "python314.log": "4970673ad05b700caad777b94f909353b7b4e81cbb913dbf5300f1327c7ce357",
+    "python311.log": "db77cebf39b30249b65acee8ad41aa3d1f6df6fadac3b783ddafb4b754c383c9"
+  },
+  "pr": "https://github.com/BigBenKenobi/The-Brain/pull/4",
+  "hosted_checks": {
+    "run_id": 42797179112,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 129765213597,
+        "python": "3.14",
+        "conclusion": "success"
+      },
+      {
+        "id": 129765214176,
+        "python": "3.11",
+        "conclusion": "success"
+      }
+    ]
+  }
+}

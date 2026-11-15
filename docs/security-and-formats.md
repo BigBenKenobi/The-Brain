@@ -51,7 +51,7 @@ private evidence. Sensitive files are omitted in full, not partially redacted.
 Selection scans all accepted text but only indexes at most 128 excerpts for .md/.txt/.rst and 32 for other files.
 Full accepted evidence is retained, including lines outside those excerpts. A
 single line longer than 1800 characters is truncated in its record, not in retained
-evidence. Explicit per-run budgets are recorded; format support does not imply
+evidence. Explicit source budgets are saved and recorded with each capture; format support does not imply
 full interpretation, full search coverage or source-recovery readiness.
 
 Knowledge retirement deliberately permits loss of original artifacts after useful
@@ -59,3 +59,29 @@ information is reviewed and preserved. A complete backup/restoration test is not
 required for this goal. Coverage gaps and privacy omissions remain explicit; no
 percentage-of-important-knowledge guarantee is made. Source deletion and sharing
 require their own authorization and are never performed by retirement checks.
+
+### Version-4 evidence storage
+
+`schemas/evidence-blobs.schema.json` describes the physical reference envelope;
+materialize before canonical validation. Blob paths accept only canonical project
+UUIDs and lowercase SHA-256 identifiers. Decode is bounded to 128 MiB, checks the
+compressed stream boundary, verifies the full decoded hash and requires UTF-8.
+Project-local lookup never falls back to another project. Missing or corrupt blobs
+make the affected snapshot unavailable rather than silently omitting evidence.
+
+`compact-copy` changes representation only in an independent destination. Existing
+snapshot files, sharing approval bytes and source files remain untouched. A receipt
+records comparisons and a zero-loss preview. This is not a deletion/forgetting API.
+No automatic garbage collection, source cleanup or remote storage is introduced.
+
+### Retrieval scope filtering
+
+Cross-project retrieval enumerates approval metadata first. A grant must bind its
+record ID to its filename, identify a known project, use the supported schema and
+shared permission, have a finite unexpired review time, and specify nonempty
+compatible technology constraints. Only candidate projects are then loaded. Actual
+snapshot membership and evidence hash are rechecked before a record can contribute.
+Malformed approvals are ignored as non-authorizing; they never broaden access.
+Approval expiry, correction chains and explicit technology constraints still apply.
+There is no approval cache across calls. A corrupted unapproved foreign snapshot
+need not be opened to answer a different project's private context request.

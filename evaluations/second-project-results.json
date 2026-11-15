@@ -1,0 +1,185 @@
+{
+  "project": "Tinker",
+  "tracked_document_count": 3,
+  "revisions": [
+    {
+      "revision": "2631a427da905179a3550a535256a5c8209b17dd",
+      "selected_sha256": {
+        "README.md": "1a5301a3d3d34bca855ecf3562114984a82586fe19952b488947fc2a9e8a54f9",
+        "docs/PROJECT_ASSISTANT.md": "c49ec612e7005b95a53d504ce13cb3cc0be288a6f07208982afb3c924cabe88a"
+      },
+      "absent_at_revision": [
+        "docs/RELEASE_READINESS.md"
+      ]
+    },
+    {
+      "revision": "99edf8a74582553a9730d9680524ad6089564155",
+      "selected_sha256": {
+        "README.md": "e5ea822416a1e7a386704c20ca6e72eaee65f6e54dde522e40aaf306e634502f",
+        "docs/PROJECT_ASSISTANT.md": "c49ec612e7005b95a53d504ce13cb3cc0be288a6f07208982afb3c924cabe88a"
+      },
+      "absent_at_revision": [
+        "docs/RELEASE_READINESS.md"
+      ]
+    },
+    {
+      "revision": "424d1b52b69147a3ff29d32b3c2721e3b1d70109",
+      "selected_sha256": {
+        "README.md": "10b72be6ac185cd4d101fe8139ee99d08098f91361dcb7009c1bfdcfeac05461",
+        "docs/PROJECT_ASSISTANT.md": "c49ec612e7005b95a53d504ce13cb3cc0be288a6f07208982afb3c924cabe88a",
+        "docs/RELEASE_READINESS.md": "dc803902f51ba1ebbcfdf247648b08262561ccaac96b70b505c006b02ea9ff69"
+      },
+      "absent_at_revision": []
+    }
+  ],
+  "comparisons": [
+    {
+      "revision": "2631a427da905179a3550a535256a5c8209b17dd",
+      "before_visible": 1,
+      "after_visible": 2,
+      "total": 3,
+      "checks": {
+        "local inference": {
+          "phrase": "application-owned offline text inference",
+          "retained": true,
+          "briefing_visible": true,
+          "state_retained": false,
+          "context_retrievable": true
+        },
+        "explicit source review": {
+          "phrase": "Approve reads",
+          "retained": true,
+          "briefing_visible": true,
+          "state_retained": true,
+          "context_retrievable": true
+        },
+        "physical acceptance still open": {
+          "phrase": "physical-device",
+          "retained": true,
+          "briefing_visible": false,
+          "state_retained": true,
+          "context_retrievable": true
+        }
+      },
+      "traceable_excerpts": 7,
+      "private_canary_absent": true
+    },
+    {
+      "revision": "99edf8a74582553a9730d9680524ad6089564155",
+      "before_visible": 1,
+      "after_visible": 2,
+      "total": 3,
+      "checks": {
+        "host ownership": {
+          "phrase": "service owns models",
+          "retained": true,
+          "briefing_visible": true,
+          "state_retained": true,
+          "context_retrievable": true
+        },
+        "model expansion": {
+          "phrase": "gpt-oss-20b",
+          "retained": true,
+          "briefing_visible": true,
+          "state_retained": false,
+          "context_retrievable": true
+        },
+        "review separate from verification": {
+          "phrase": "real-model usefulness",
+          "retained": true,
+          "briefing_visible": false,
+          "state_retained": false,
+          "context_retrievable": true
+        }
+      },
+      "traceable_excerpts": 7,
+      "private_canary_absent": true
+    },
+    {
+      "revision": "424d1b52b69147a3ff29d32b3c2721e3b1d70109",
+      "before_visible": 2,
+      "after_visible": 3,
+      "total": 5,
+      "checks": {
+        "pre-release status": {
+          "phrase": "pre-release candidate",
+          "retained": true,
+          "briefing_visible": true,
+          "state_retained": true,
+          "context_retrievable": true
+        },
+        "retired gate not passed": {
+          "phrase": "not been relabelled",
+          "retained": true,
+          "briefing_visible": false,
+          "state_retained": false,
+          "context_retrievable": true
+        },
+        "unresolved validation": {
+          "phrase": "Note retry first-stream timeout",
+          "retained": true,
+          "briefing_visible": true,
+          "state_retained": true,
+          "context_retrievable": true
+        },
+        "host connectivity limitation": {
+          "phrase": "direct access",
+          "retained": true,
+          "briefing_visible": false,
+          "state_retained": true,
+          "context_retrievable": true
+        },
+        "source review boundary": {
+          "phrase": "Approve reads",
+          "retained": true,
+          "briefing_visible": true,
+          "state_retained": true,
+          "context_retrievable": true
+        }
+      },
+      "traceable_excerpts": 5,
+      "private_canary_absent": true
+    }
+  ],
+  "resilience": {
+    "unchanged_observation": true,
+    "outage_preserved_snapshot": true,
+    "failure_visible": true,
+    "recovery_complete": true,
+    "recovered_snapshot_valid": true
+  },
+  "owner_resumption": {
+    "baseline_seconds": null,
+    "with_brain_seconds": null,
+    "accepted": false
+  },
+  "limitations": [
+    "Three tracked documents only; no application database, chat, model, source-code execution or bulk import.",
+    "Historical source claims are retained reports, not independently verified present-day product status.",
+    "Lexical checks do not prove semantic understanding, supersession or human resumption benefit.",
+    "Missing release-readiness file in older revisions is absence of evidence, not evidence of readiness.",
+    "The second-project technical pilot does not complete owner acceptance or local-model evaluation."
+  ],
+  "automation_enabled": false,
+  "sharing_approved": false,
+  "live_tinker_modified": false,
+  "sha256": {
+    "brain/core.py": "78042f30408b92eadf26d7cae3fad3d7e1ebc7b24fbfa9fe6a24d1c4481006a7",
+    "brain/briefing.py": "113b74fa43378ddd70746460198b48fb16a560ece8daaf68280c0d8633dd672f",
+    "tests/test_table_evidence.py": "604a2d80d73b5242a558d5c039cc4a81f03e031b2fd0f03ba6dda87f3d71409a",
+    "scripts/evaluate_second_project.py": "161463d0a30faf2f1f95cd8c6b30f93521cf02853e795cac645dd1e392811766"
+  },
+  "tests_passed": {
+    "python3.11.18": 109,
+    "python3.14.10": 109
+  },
+  "first_project_immutable_replay": {
+    "current_context_hits": 5,
+    "current_context_total": 5,
+    "held_out_hits": 3,
+    "held_out_total": 3,
+    "all_excerpt_traceability": true,
+    "expanded_vision_hits": 0,
+    "expanded_vision_total": 2
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "commits": {
+    "brain": "9bdeadebddfcd1a999007d9e1229d6422ba113b0",
+    "tinker": "84d6cc57ede836bb30f1ab42103ecdbfc6e24f06"
+  },
+  "brain_tests": {
+    "3.11.18": 146,
+    "3.14.10": 146
+  },
+  "tinker_note_project_tests": 91,
+  "installed_memory_tests": 11,
+  "installed_trial": {
+    "scoped_verification_receipt_checked": true,
+    "expanded_view_reveals_omitted_context": true,
+    "detail_change_requires_reload": true,
+    "revoke_restores_brief": true,
+    "consolidation_conflict_visible": true,
+    "grouped_support_evidence_loaded": true,
+    "configuration_section_visible": true,
+    "real_cli_project_list": true,
+    "briefing_loaded": true,
+    "retained_evidence_loaded": true,
+    "store_byte_unchanged": true,
+    "model_context_unchanged": true,
+    "owner_revoke_cleared": true,
+    "qt": "6.11.3",
+    "mode": "offscreen",
+    "installed_packages": true,
+    "imports": {
+      "brain": "/tmp/brain-tinker-ui-env/lib/python3.11/site-packages/brain/core.py",
+      "tinker_memory": "/tmp/brain-tinker-ui-env/lib/python3.11/site-packages/ui/project_memory.py"
+    }
+  },
+  "wheel_runtime_bytes_match_commits": true,
+  "bundles_verified": true,
+  "published": true,
+  "live_store_changed": false,
+  "original_tinker_worktree_changed": false,
+  "artifacts": {
+    "brain.bundle": "321ab6d30983bc042433ff1a30817b8d45f2d5e2c5570646311dfeebe4953cd4",
+    "brain-bundle-verify.txt": "2ed03b8c63f17cb17ab7859c0ce17af8eba5b717cb688db27ce02e4a987d4119",
+    "brain.patch": "b8ae487e34fd1c5377aac83e269590b14313679e211256017e1d7fff328fe6ff",
+    "project_brain_local-0.1.0-py3-none-any.whl": "ce91ccd6d607f20370a5900604204573b22adb4f3564c47f17733e05f9cde13b",
+    "tinker.bundle": "bc5ba2c11ad4011eb6d67efff3f030755bddb9f45bdef161e7fa38ef994be268",
+    "tinker-bundle-verify.txt": "9d0edc4ffa1d5c102c63f8c2ce1c34391af7c72b0b5d784fd22ccb2e576cde51",
+    "tinker.patch": "1f0f0614450cbac1ed590ce4962af5e4cabd08b1194e0b49e62c4cb09dd1ba96",
+    "tinker-0.1.0-py3-none-any.whl": "6af4f38f5b9bd6a97df52bce7e48df36a395e1a58d0471a38653cc59f3353dd0",
+    "python314.log": "033daa0e8ef7b4d4504c98bb18aed709591b9705700dc48cfea4afc9832133e4",
+    "python311.log": "eee627b53dda7739bea4fc39409ebe73d17c9502c1a66b2183743f7d231b0487",
+    "installed-ui.json": "94bfb9933c3e39713119db46b11ed2cd2c699c69491e786df90cf95effeaa3eb",
+    "installed-ui.png": "341a7bcaceb1131de8c290f6997d21e19149cc3ac886d4ac21375b1c9a724355"
+  },
+  "limits": [
+    "Native acceptance and owner resumption remain unverified.",
+    "Local observer attestation is not authenticated authorship or automatic semantic proof.",
+    "Journal3 has not been activated in the live store.",
+    "Draft PR9 and PR71 remain unmerged; no release or live deployment."
+  ],
+  "draft_prs": {
+    "brain": "https://github.com/BigBenKenobi/The-Brain/pull/9",
+    "tinker": "https://github.com/BigBenKenobi/Tinker/pull/71"
+  },
+  "tinker_hosted_ci": {
+    "run": 42812059392,
+    "commit": "84d6cc57ede836bb30f1ab42103ecdbfc6e24f06",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 129815882078,
+        "name": "Desktop / Python 3.11",
+        "status": "completed",
+        "conclusion": "success",
+        "checkout_tests": 1865,
+        "archive_tests": 1865
+      },
+      {
+        "id": 129815882518,
+        "name": "Desktop / Python 3.14",
+        "status": "completed",
+        "conclusion": "success",
+        "checkout_tests": 1865,
+        "archive_tests": 1865
+      },
+      {
+        "id": 129815883581,
+        "name": "Desktop / Python 3.12",
+        "status": "completed",
+        "conclusion": "success",
+        "checkout_tests": 1865,
+        "archive_tests": 1865
+      }
+    ],
+    "installed_checks": "passed; Python 3.12 includes LaMa repair and network isolation",
+    "limits": "Offscreen and synthetic worker evidence is not native KDE or real model acceptance."
+  }
+}

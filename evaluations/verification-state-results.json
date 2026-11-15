@@ -1,0 +1,41 @@
+{
+  "tests": {
+    "3.11.18": 146,
+    "3.14.10": 146
+  },
+  "journal_version": 3,
+  "older_reader": "9ab32d0",
+  "older_reader_rejected": true,
+  "archive_fixture_integrity_verified": true,
+  "scope": "Explicit local observer attestation for behavior/environment only",
+  "validated": [
+    "No implicit adoption",
+    "Failed/dirty/foreign/tampered receipt rejection",
+    "Whole-item status and canonical snapshots unchanged",
+    "Undo retains receipt history",
+    "Correction and contradiction require historical review",
+    "Unchanged observations preserve subject binding",
+    "Copy compaction preserves reviews and checks undone receipt integrity",
+    "Failed head publication leaves review invisible",
+    "CLI adoption and readback"
+  ],
+  "sha256": {
+    "brain/verification.py": "ebc2b882bd4d43a038378510c4f24dd55b92c621f4c5b671c95cf29e1b0a8cea",
+    "brain/state.py": "426cccfd8e1f137a68c57dc35ddbd9344f9f98933fea6ee8ff0293a0934b7fc2",
+    "brain/__main__.py": "16374e167cc61ce3680dd44f2858c07ca1a574c34cfd7bfe4cc6dbd02467811e",
+    "brain/briefing.py": "02ef091b0c5333f75a0b3908a140485e6a67ddd3b9b970d581bf56c334afc945",
+    "scripts/run_verification.py": "24f514f80367f7dc6141ca7667835560c57a4e822a2e23568d6573628d37347b",
+    "tests/test_verification_runner.py": "ebf28111671b44b59225de92fa7dd949fae1ee2c8768a1ba5003c39b47832fbb",
+    "tests/test_verification_state.py": "3ddca1d755626f9f6895031b3c21d6df82d7620cdf816f35ef46f0ca8eecc383",
+    "docs/verification-evidence.md": "a5eb45c2af15140a5bf2698c52dd4ccce18b3c667dffe5fd7408bd8dbdc78bb8",
+    "docs/maintained-state.md": "eca75665ceaad322d86d6792a7b0b73c686de76ef7c5ece8d75026a09d318d16"
+  },
+  "published": false,
+  "live_store_changed": false,
+  "limits": [
+    "Observer identity and semantic adequacy rely on explicit local review, not authenticated signatures.",
+    "Untracked inputs and external dependencies are not archived by the runner.",
+    "Published Tinker consumer does not yet display scoped verification fields.",
+    "No live journal migration or host-model evaluation."
+  ]
+}
