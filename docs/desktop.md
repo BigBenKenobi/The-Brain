@@ -24,6 +24,10 @@ menu entry for the current checkout. An existing launcher is backed up with a
 `.previous` suffix. Remove `the-brain.desktop` and `the-brain.svg` from the user
 applications/icon directories to uninstall that entry; knowledge is untouched.
 
+The desktop extra pins the validated PySide6 6.11.2 runtime. A CI trial with
+PySide6 6.12 passed all desktop assertions but aborted during Python 3.11 shutdown;
+runtime upgrades need a clean process exit as well as passing assertions.
+
 ## Navigation
 
 Select a project in the sidebar. Overview shows bounded recorded excerpts and
