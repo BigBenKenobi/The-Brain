@@ -4,6 +4,7 @@ Project-Brain/
 private-intake/
 /backups/
 /evaluations/runs/
+/outputs/desktop/
 *.egg-info/
 .venv/
 .env

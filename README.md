@@ -36,6 +36,10 @@ These remain documented excerpts, not AI-generated or independently verified ins
 
 ## Run
 
+For a native read-only interface, see [The Brain desktop](docs/desktop.md).
+With PySide6 installed, run `./scripts/launch_desktop.sh` to browse the local store.
+The optional `desktop` package extra also provides a `brain-desktop` entry point.
+
 For development on another machine or in an online terminal with Python 3.11+
 (Linux/POSIX), clone the repository and run the tests:
 
