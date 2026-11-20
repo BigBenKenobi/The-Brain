@@ -36,6 +36,10 @@ These remain documented excerpts, not AI-generated or independently verified ins
 
 ## Run
 
+For a native read-only interface, see [The Brain desktop](docs/desktop.md).
+With PySide6 installed, run `./scripts/launch_desktop.sh` to browse the local store.
+The optional `desktop` package extra also provides a `brain-desktop` entry point.
+
 For development checks, disposable CLI fixtures and contribution guidance, see
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -113,8 +117,9 @@ Explicit ingestion overrides are saved only when the capture publishes successfu
 `configure-source` changes future settings without rewriting prior observations;
 the briefing distinguishes configured and captured revisions. Use
 `--clear-exclusions`, `--no-historical`, or `--reset-budgets` for explicit resets.
-Sources start disabled for automatic capture. `--enabled` opts a source in for a
-future scheduler; no background service is installed by these commands.
+Sources start with automatic capture disabled. Enable a source with
+`configure-source SOURCE_ID --enabled` and resume the worker with
+`refresh-policy --no-paused`. Use `refresh-once` to run one pass over due sources.
 
 The first source retains ordinary evidence paths. Additional sources use
 `sources/SOURCE_ID/` prefixes; refreshing one preserves the others. Pinned

@@ -8,17 +8,24 @@ behavior, measured evidence and remaining product acceptance.
 ## Development checks
 
 Use Python 3.11 or newer on Linux/POSIX and run commands from the repository
-root. The CLI and test suite use the Python standard library; installing the
-package, model weights or provider credentials is unnecessary.
+root. The CLI and core tests use the Python standard library.
 
 ```bash
 python3 -m unittest discover -s tests -v
 python3 -m brain --help
 ```
 
-[Python tests](.github/workflows/tests.yml) runs the unittest command on Python
-3.11 and 3.14. A focused iteration can use discovery's filename filter, for
-example `python3 -m unittest discover -s tests -p 'test_sources.py' -v`.
+[Python tests](.github/workflows/tests.yml) runs the core and offscreen desktop
+checks on Python 3.11 and 3.14. To exercise the Qt interface locally, install the
+optional desktop extra and run its test module:
+
+```bash
+python3 -m pip install '.[desktop]'
+QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -p test_desktop.py -v
+```
+
+For a focused core check, use discovery's filename filter, for example
+`python3 -m unittest discover -s tests -p 'test_sources.py' -v`.
 Run the complete suite before submitting changes across shared storage,
 ingestion or retrieval boundaries.
 

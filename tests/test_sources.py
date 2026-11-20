@@ -83,6 +83,52 @@ class Sources(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.b.ingest(other, source_id=sid)
 
+    def test_reused_path_resolves_the_active_registration_instead_of_location_history(self):
+        first = self.ingest(excluded_paths=['excluded.md'])
+        moved = self.base / 'moved'
+        self.source.rename(moved)
+        self.b.configure_source(first['source_id'], new_location=moved)
+        self.source.mkdir()
+        (self.source / 'README.md').write_text('Decision: a different project uses the released directory.\n')
+        second = self.ingest(historical=True)
+        self.assertNotEqual(first['project_id'], second['project_id'])
+
+        repeated = self.ingest()
+        self.assertEqual(repeated['source_id'], second['source_id'])
+        self.assertEqual(repeated['project_id'], second['project_id'])
+        self.assertTrue(self.config(second['source_id'])['historical'])
+        self.assertEqual(self.config(first['source_id'])['excluded_paths'], ['excluded.md'])
+        with self.assertRaisesRegex(ValueError, 'Location already registered'):
+            self.ingest(project_id=first['project_id'])
+
+    def test_cli_ingest_honors_project_id_for_legacy_duplicate_locations(self):
+        first = self.ingest(excluded_paths=['excluded.md'])
+        other = self.base / 'other'
+        other.mkdir()
+        second = self.b.ingest(other, historical=True)
+        registry = read(self.b.registry_path)
+        registry['sources'][second['source_id']]['location'] = str(self.source)
+        registry['projects'][second['project_id']]['locations'].append(str(self.source))
+        write(self.b.registry_path, registry)
+
+        command = [sys.executable, '-m', 'brain', '--brain', str(self.b.root), 'ingest', str(self.source)]
+        result = subprocess.run([*command, '--project-id', second['project_id']], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        captured = json.loads(result.stdout)
+        self.assertEqual(captured['project_id'], second['project_id'])
+        self.assertEqual(captured['source_id'], second['source_id'])
+        self.assertEqual(self.b.project(first['project_id'])['snapshot'], first['snapshot'])
+        after = read(self.b.registry_path)
+        self.assertEqual(after['sources'], registry['sources'])
+
+        for args, error in (([], 'Ambiguous source location'),
+                            (['--project-id', second['project_id'], '--new-source'], 'Location already registered')):
+            with self.subTest(args=args):
+                rejected = subprocess.run([*command, *args], capture_output=True, text=True)
+                self.assertEqual(rejected.returncode, 1)
+                self.assertIn(error, rejected.stderr)
+                self.assertEqual(read(self.b.registry_path), after)
+
     def test_failed_publication_does_not_commit_config_or_observation(self):
         first = self.ingest(excluded_paths=['excluded.md'])
         pid, sid = first['project_id'], first['source_id']
@@ -249,6 +295,76 @@ class Sources(unittest.TestCase):
         self.assertEqual(read(self.b.root / 'config.json')['schema_version'], 1)
         self.assertEqual(Brain(self.b.root).snapshot(pid), old)
         self.assertEqual(Brain(self.base / 'backup' / 'store').snapshot(pid), old)
+
+    def test_upgrade_rejects_external_snapshot_links_and_allows_retry(self):
+        pid, old = self.make_legacy()
+        for kind in ('absolute', 'relative'):
+            with self.subTest(kind=kind):
+                live = self.base / f'live-{kind}' / 'store'
+                shutil.copytree(self.b.root, live)
+                snapshots = live / 'projects' / pid / 'snapshots'
+                target = snapshots.with_name('snapshot-data') if kind == 'absolute' else self.base / 'external-snapshots'
+                snapshots.rename(target)
+                link = target if kind == 'absolute' else os.path.relpath(target, snapshots.parent)
+                snapshots.symlink_to(link, target_is_directory=True)
+
+                legacy = Brain(live)
+                backup = self.base / f'backup-{kind}'
+                before_attempt = set(self.base.iterdir())
+                with self.assertRaisesRegex(ValueError, 'symbolic link must resolve inside'):
+                    legacy.upgrade_store(backup)
+                self.assertEqual(read(live / 'config.json')['schema_version'], 1)
+                self.assertEqual(legacy.snapshot(pid), old)
+                self.assertEqual(set(self.base.iterdir()), before_attempt)
+
+                snapshots.unlink()
+                target.rename(snapshots)
+                upgrade = legacy.upgrade_store(backup)
+                self.assertEqual(upgrade['snapshots_validated'], 1)
+                self.assertEqual(set(self.base.iterdir()), (before_attempt - {target}) | {backup})
+                self.assertEqual(Brain(backup / 'store').snapshot(pid), old)
+
+    def test_upgrade_preserves_destination_created_before_publication(self):
+        self.make_legacy()
+        backup = self.base / 'backup'
+        before_attempt = set(self.base.iterdir())
+
+        def create_destination_after_receipt(path, value):
+            write(path, value)
+            if path.name == 'rollback.json':
+                backup.mkdir()
+
+        with patch('brain.core.write', side_effect=create_destination_after_receipt):
+            with self.assertRaises(FileExistsError):
+                self.b.upgrade_store(backup)
+        self.assertEqual(list(backup.iterdir()), [])
+        self.assertEqual(set(self.base.iterdir()), before_attempt | {backup})
+        self.assertEqual(read(self.b.root / 'config.json')['schema_version'], 1)
+
+    def test_restoring_upgrade_backup_preserves_runtime_symlink_and_allows_repinning(self):
+        from scripts.install_runtime import install
+
+        package = self.base / 'package'
+        package.mkdir()
+        (package / '__init__.py').write_text('# First fixture runtime\n')
+        pinned = install(self.b.root, package)['revision']
+        self.make_legacy()
+        backup = self.base / 'backup'
+        self.b.upgrade_store(backup)
+        saved_link = backup / 'store' / 'runtime' / 'current'
+        self.assertTrue(saved_link.is_symlink())
+        self.assertEqual(os.readlink(saved_link), pinned)
+        self.assertEqual(saved_link.resolve(strict=True), saved_link.with_name(pinned).resolve(strict=True))
+        self.assertEqual(read(backup / 'rollback.json')['store_symlink_targets']['runtime/current'], pinned)
+
+        restored = self.base / 'restored'
+        shutil.copytree(backup / 'store', restored, symlinks=True)
+        Brain(restored).upgrade_store(self.base / 'restored-backup')
+        (package / '__init__.py').write_text('# Second fixture runtime\n')
+        new_revision = install(restored, package)['revision']
+        self.assertNotEqual(pinned, new_revision)
+        self.assertEqual(os.readlink(restored / 'runtime' / 'current'), new_revision)
+        self.assertEqual(os.readlink(saved_link), pinned)
 
     def test_cli_refresh_reuses_and_explicitly_resets_settings(self):
         def cli(*args):

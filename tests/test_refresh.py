@@ -1,4 +1,5 @@
 import json
+from itertools import count
 from pathlib import Path
 import tempfile
 import time
@@ -174,6 +175,67 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(snap['processing_budgets']['max_files'], 1)
         self.assertEqual(read(self.b.registry_path)['sources'][self.sid]['configuration'], saved)
         self.assertTrue(snap['coverage_warnings'])
+
+    def test_exact_file_budget_with_empty_subdirectory_completes(self):
+        self.enable()
+        self.worker.configure(max_files_per_run=1)
+        subdirectory = self.source / 'notes'
+        subdirectory.mkdir()
+        now = time.time()
+
+        result = self.worker.run_once(now=now)['results'][0]
+        self.assertEqual(result['state'], 'idle')
+        self.assertEqual(result['next_due'], now + 900)
+        snapshot = self.b.snapshot(self.pid)
+        self.assertEqual(snapshot['metrics']['files_seen'], 1)
+        self.assertEqual(snapshot['coverage_warnings'], [])
+
+        (subdirectory / 'extra.md').write_text('Idea: review during a later pass.\n')
+        result = self.worker.run_once(now=result['next_due'])['results'][0]
+        self.assertEqual(result['state'], 'partial')
+        snapshot = self.b.snapshot(self.pid)
+        self.assertEqual(snapshot['metrics']['files_seen'], 1)
+        self.assertEqual(snapshot['coverage_warnings'][0]['path'], 'notes')
+
+    def test_one_second_run_budget_can_start_due_work(self):
+        self.enable()
+        self.worker.configure(max_run_seconds=1)
+        ticks = count()
+        with patch('brain.refresh.time.monotonic', side_effect=lambda: next(ticks) / 100):
+            result = self.worker.run_once()
+        self.assertEqual(result['processed'], 1)
+        self.assertEqual(result['results'][0]['state'], 'idle')
+
+    def test_expired_deadline_before_scan_defers_and_preserves_searchable_evidence(self):
+        self.enable()
+        self.worker.configure(max_run_seconds=1)
+        previous = self.b.snapshot(self.pid)
+        now = time.time()
+        elapsed = 0
+        snapshot = self.b.snapshot
+
+        def slow_snapshot(*args, **kwargs):
+            nonlocal elapsed
+            elapsed = 2
+            return snapshot(*args, **kwargs)
+
+        with patch('brain.refresh.time.monotonic', side_effect=lambda: elapsed):
+            with patch.object(self.b, 'snapshot', side_effect=slow_snapshot):
+                result = self.worker.run_once(now=now)
+        self.assertEqual(result['state'], 'deferred')
+        self.assertEqual(result['results'][0]['state'], 'deferred')
+        self.assertEqual(result['results'][0]['error'], 'scan_deadline')
+        self.assertEqual(result['results'][0]['next_due'], now + 10)
+        self.assertEqual(self.worker.status()['sources'][0]['state'], 'deferred')
+        self.assertEqual(self.b.briefing(self.pid)['source_health'][0]['state'], 'deferred')
+        self.assertEqual(self.b.snapshot(self.pid), previous)
+        self.assertEqual(len(self.snapshots()), 1)
+        matches = self.b.retrieve('SQLite locking', self.pid)
+        self.assertTrue(matches)
+        self.assertIn('bounded retry', matches[0]['statement'])
+        self.assertEqual(self.worker.run_once(now=now + 9)['processed'], 0)
+        self.assertEqual(self.worker.run_once(now=now + 10)['results'][0]['state'], 'idle')
+        self.assertEqual(self.b.briefing(self.pid)['source_health'][0]['state'], 'complete')
 
     def test_partial_write_has_no_successful_observation_and_retries(self):
         self.enable()

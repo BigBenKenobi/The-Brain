@@ -17,13 +17,16 @@ Enabling capture is an explicit opt-in decision for the selected source. The
 900-second interval and1GiB cap above are examples matching the approved curated-note
 deployment, not permission to enable other sources. Pause with `refresh-policy
 --paused`; disable an individual source with `configure-source SOURCE_ID --no-enabled`.
-Read `refresh-status` for paused/disabled, idle, running, partial, stale and failed
+Read `refresh-status` for paused/disabled, idle, running, partial, deferred, stale and failed
 states, last success, next attempt and errors. An on-disk running marker alone does
 not prove a live worker.
 
 A non-overlapping worker lock and a nonblocking writer-lock check prevent concurrent
 capture. Per-run file, byte, source and time budgets bound work without overwriting
-saved source configuration. Transient failures persist bounded exponential retry
+saved source configuration. The worker shares one scan deadline across due sources.
+If the deadline cuts off inventory before any files are processed, the worker records a
+deferral and retries while keeping the previous snapshot active.
+Transient failures persist bounded exponential retry
 state. Failed publication keeps the previous valid snapshot. Capacity exhaustion
 stops new capture with an explicit error; existing knowledge is not deleted.
 
