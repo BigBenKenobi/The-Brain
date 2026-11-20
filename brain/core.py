@@ -24,6 +24,23 @@ STOP = set('the and for with from this that into using a an to of in is on or as
 def digest(data):
     return hashlib.sha256(data).hexdigest()
 
+def _internal_link_target(link, root):
+    """Resolve a relative symbolic link whose target path stays inside root."""
+    target = Path(os.readlink(link))
+    if target.is_absolute():
+        return None
+    target_path = link.parent / target
+    try:
+        resolved = target_path.resolve(strict=True)
+        # A target that leaves and reenters root can depend on its original location.
+        if resolved.is_relative_to(root) and all(
+                prefix.resolve(strict=True).is_relative_to(root)
+                for prefix in target_path.parents if prefix.is_relative_to(root)):
+            return resolved
+    except (OSError, RuntimeError):
+        pass
+    return None
+
 def read(path):
     return json.loads(Path(path).read_text())
 
@@ -47,6 +64,29 @@ def tokens(text):
 def match_tokens(text):
     # Retrieval-only normalisation preserves immutable legacy search indexes.
     return {token.rstrip('.') for token in tokens(text)}
+
+def _sharing_approval(path, technologies):
+    try:
+        approval = read(path)
+        if (isinstance(approval, dict) and approval.get('schema_version') == VERSION
+                and approval.get('record_id') == path.stem
+                and isinstance(approval.get('project_id'), str)
+                and approval.get('permission') == 'shared'
+                and type(approval.get('review_after')) in (int, float)
+                and time.time() <= approval['review_after'] < float('inf')
+                and isinstance(approval.get('technologies'), list) and approval['technologies']
+                and all(isinstance(t, str) and t for t in approval['technologies'])
+                and set(approval['technologies']).issubset(technologies)):
+            return approval
+    except (OSError, ValueError, TypeError):
+        # Invalid approvals confer no permission.
+        pass
+    return None
+
+def _approval_covers_record(approval, record):
+    return (approval is not None and approval['project_id'] == record['project_id']
+            and approval['record_id'] == record['id'] and approval['review_after'] >= time.time()
+            and approval.get('evidence_sha256') == record['evidence']['sha256'])
 
 def initialize(root):
     root = Path(root).resolve()
@@ -136,33 +176,17 @@ class Brain:
                 links[relative] = os.readlink(path)
                 if not copied_path.is_symlink() or os.readlink(copied_path) != links[relative]:
                     raise ValueError('Backup symbolic link verification failed')
-                target = Path(links[relative])
-                target_path = copied_path.parent / target
-                prefixes = (target_path, *target_path.parents)
-                message = f'Backup symbolic link must resolve inside the copied store ({relative})'
-                try:
-                    # Check intermediate paths too so a link cannot leave and reenter the copy.
-                    if target.is_absolute() or any(
-                            not prefix.resolve(strict=True).is_relative_to(store_copy)
-                            for prefix in prefixes if prefix.is_relative_to(store_copy)):
-                        raise ValueError(message)
-                except (OSError, RuntimeError) as error:
-                    raise ValueError(message) from error
+                if _internal_link_target(copied_path, store_copy) is None:
+                    raise ValueError(f'Backup symbolic link must resolve inside the copied store ({relative})')
             elif path.is_file() and path.name != '.lock':
                 hashes[relative] = digest(path.read_bytes())
                 if copied_path.is_symlink() or digest(copied_path.read_bytes()) != hashes[relative]:
                     raise ValueError('Backup copy verification failed')
         copied = Brain(store_copy)
         count = 0
-        for project_id, project in read(copied.registry_path)['projects'].items():
-            active = project.get('snapshot')
-            if not active:
-                continue
-            snapshots = store_copy / 'projects' / project_id / 'snapshots'
-            snapshot_ids = {path.stem for path in snapshots.glob('*.json')}
-            snapshot_ids.add(active)
-            for snapshot_id in sorted(snapshot_ids):
-                validate(copied.snapshot(project_id, snapshot_id))
+        for project_id in read(copied.registry_path)['projects']:
+            for stored in copied.history_snapshots(project_id):
+                validate(copied.snapshot(project_id, stored['id']))
                 count += 1
         write(staging / 'rollback.json', {'store': str(self.root), 'schema_version': schema_version,
             'snapshots_validated': count, 'store_file_sha256': hashes, 'store_symlink_targets': links,
@@ -203,16 +227,47 @@ class Brain:
             raise ValueError('Source is disabled for automatic capture')
         return self.ingest(source['location'], source_id=source_id, automatic=automatic)
 
+    def _snapshot_file(self, project_id, sid):
+        if not isinstance(sid, str) or str(uuid.UUID(sid)) != sid:
+            raise ValueError('Invalid snapshot identity')
+        result = read(self.root / 'projects' / project_id / 'snapshots' / (sid + '.json'))
+        if result['project_id'] != project_id or result['id'] != sid:
+            raise ValueError('Snapshot identity mismatch')
+        return result
+
+    def history_snapshots(self, project_id):
+        """Yield physical metadata for published lineage and earlier unlinked history."""
+        cursor = self.project(project_id).get('snapshot')
+        seen = set()
+        while cursor is not None:
+            if cursor in seen:
+                raise ValueError('Cyclic snapshot lineage')
+            stored = self._snapshot_file(project_id, cursor)
+            seen.add(cursor)
+            yield stored
+            if 'parent_snapshot' not in stored:
+                break
+            cursor = stored['parent_snapshot']
+        else:
+            return  # Explicit lineage reached a known first capture.
+
+        # Older writers did not record predecessors. Preserve their unlinked
+        # history for this registered project, without admitting modern forks.
+        for path in sorted((self.root / 'projects' / project_id / 'snapshots').glob('*.json')):
+            if path.stem in seen:
+                continue
+            legacy = read(path)
+            if 'parent_snapshot' not in legacy:
+                if legacy['id'] != path.stem or legacy['project_id'] != project_id:
+                    raise ValueError('Legacy snapshot identity mismatch')
+                yield legacy
+
     def snapshot(self, project_id, snapshot_id=None):
         project = self.project(project_id)
         if not project.get('snapshot'):
             raise ValueError('Project has no published ingestion')
         sid = snapshot_id or project['snapshot']
-        if str(uuid.UUID(sid)) != sid:
-            raise ValueError('Invalid snapshot identity')
-        result = read(self.root / 'projects' / project_id / 'snapshots' / (sid + '.json'))
-        if result['project_id'] != project_id or result['id'] != sid:
-            raise ValueError('Snapshot identity mismatch')
+        result = self._snapshot_file(project_id, sid)
         if result.get('storage_format') == 'observation-1':
             base_id = result['content_snapshot']
             if str(uuid.UUID(base_id)) != base_id or base_id == sid:
@@ -305,11 +360,8 @@ class Brain:
             target['id'] = str(uuid.uuid4())
             target['created_at'] = time.time()
             self._include_supplements(target, supplements)
-            validate(target)
-            write(self.root / 'projects' / project_id / 'snapshots' / (target['id'] + '.json'), target)
             project['supplements'] = supplements
-            project['snapshot'] = target['id']
-            write(self.registry_path, registry)
+            self._publish_revision(registry, target)
             return {'project_id': project_id, 'snapshot': target['id'], 'changed': True,
                     'records': len(target['records']), 'consolidation': target['consolidation']}
 
@@ -456,24 +508,28 @@ class Brain:
                         if p.suffix.lower() not in TEXT and p.suffix and name not in {'Dockerfile', 'Makefile', 'LICENSE'}:
                             entry.update(status='unsupported', reason='format not interpreted or retained')
                             continue
-                        if info.st_size > limits['max_file_bytes'] or metrics['bytes_read'] + info.st_size > limits['max_total_bytes']:
+                        remaining_bytes = limits['max_total_bytes'] - metrics['bytes_read']
+                        read_limit = min(limits['max_file_bytes'], remaining_bytes)
+                        if info.st_size > read_limit:
                             entry.update(status='unprocessed', reason='byte budget')
                             continue
                         # O_NOFOLLOW prevents a final-component symlink swap.
                         fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-                        with os.fdopen(fd, 'rb') as handle:
+                        with os.fdopen(fd, 'rb', buffering=0) as handle:
                             before = os.fstat(handle.fileno())
                             if not stat.S_ISREG(before.st_mode):
                                 raise OSError('Not a regular file')
-                            data = handle.read(int(limits['max_file_bytes']) + 1)
+                            if before.st_size > read_limit:
+                                entry.update(status='unprocessed', reason='byte budget')
+                                continue
+                            data = handle.read(before.st_size)
+                            metrics['bytes_read'] += len(data)
                             after = os.fstat(handle.fileno())
-                        if len(data) > limits['max_file_bytes'] or (before.st_mtime_ns, before.st_size, before.st_ino) != (after.st_mtime_ns, after.st_size, after.st_ino) or (info.st_ino, info.st_mtime_ns) != (after.st_ino, after.st_mtime_ns):
+                        if (len(data) != after.st_size
+                                or (before.st_mtime_ns, before.st_size, before.st_ino) != (after.st_mtime_ns, after.st_size, after.st_ino)
+                                or (info.st_mtime_ns, info.st_size, info.st_ino) != (after.st_mtime_ns, after.st_size, after.st_ino)):
                             entry.update(status='unprocessed', reason='source changed during read or exceeded budget')
                             continue
-                        if metrics['bytes_read'] + len(data) > limits['max_total_bytes']:
-                            entry.update(status='unprocessed', reason='total byte budget')
-                            continue
-                        metrics['bytes_read'] += len(data)
                         text = data.decode('utf-8')
                         if '\x00' in text:
                             raise UnicodeError('binary text')
@@ -540,7 +596,7 @@ class Brain:
                 last_complete_at=(old.get('source_health', {}).get(source_id, {}).get('last_complete_at') if partial else snap['capture']['finished_at']))
             snap['coverage_warnings'].extend(w for w in old.get('coverage_warnings', [])
                 if w.get('source_id') not in (None, source_id) and not w.get('consolidated_from'))
-            snap['relations'] = old.get('relations', [])
+            snap['relations'] = list(old.get('relations', []))
             snap['parent_snapshot'] = old.get('id')
             snap['processing_budgets'] = dict(limits)
             snap['search_index'] = {r['id']: sorted(tokens(r['statement'])) for r in records}
@@ -549,6 +605,9 @@ class Brain:
             snap['project_types'] = sorted(set(snap['project_types'])) or ['unclassified']
             self._include_supplements(snap, projects.get(project_id, {}).get('supplements', {}))
             validate(snap)
+            if snap['relations'] != old.get('relations', []):
+                from .state import ProjectState
+                ProjectState(self, project_id).view(_current=snap)
             folder = self.root / 'projects' / project_id
             # Same evidence and canonical records can reference one immutable full
             # snapshot. Inventory and observation metadata remain independent.
@@ -683,6 +742,39 @@ class Brain:
             write(self.root / 'shared' / (record_id + '.json'), approval)
             return approval
 
+    def shared_evidence(self, project_id, snapshot_id, record_id, technologies, *, history=False):
+        """Read the exact approved statement at a search result's pinned capture."""
+        unavailable = 'Sharing approval is unavailable for this result. Search again for approved knowledge.'
+        if not snapshot_id or not isinstance(record_id, str) or not re.fullmatch(r'[0-9a-f]{64}', record_id):
+            raise ValueError(unavailable)
+        path = self.root / 'shared' / (record_id + '.json')
+        target = {label.lower() for label in technologies}
+        approval = _sharing_approval(path, target)
+        if approval is None or approval['project_id'] != project_id:
+            raise ValueError(unavailable)
+
+        current = self.snapshot(project_id)
+        validate(current)
+        active_record = next((r for r in current['records'] if r['id'] == record_id), None)
+        if (active_record is None or not _approval_covers_record(approval, active_record)
+                or (not history and any(e['older'] == record_id for e in current.get('relations', [])))):
+            raise ValueError(unavailable)
+
+        pinned, record = current, active_record
+        if snapshot_id != current['id']:
+            pinned = self.snapshot(project_id, snapshot_id)
+            validate(pinned)
+            record = next((r for r in pinned['records'] if r['id'] == record_id), None)
+            if (record is None or record['evidence'] != active_record['evidence']
+                    or record['statement'] != active_record['statement']):
+                raise ValueError(unavailable)
+        if not _approval_covers_record(_sharing_approval(path, target), record):
+            raise ValueError(unavailable)
+        evidence = record['evidence']
+        return {'project_id': project_id, 'snapshot': pinned['id'], 'created_at': pinned['created_at'],
+                'path': evidence['path'], 'sha256': evidence['sha256'], 'start_line': evidence['start_line'],
+                'end_line': evidence['end_line'], 'text': record['statement'], 'source': 'approved_record'}
+
     def relate(self, project_id, older, replacement, kind, rationale):
         """Explicit reviewed precedence, published atomically without changing evidence."""
         if kind not in {'corrects', 'supersedes', 'duplicates'} or not rationale.strip():
@@ -700,13 +792,10 @@ class Brain:
             if edge in edges:
                 return {'changed': False, 'snapshot': s['id']}
             edges.append(edge)
-            validate(s)
             s['parent_snapshot'] = s['id']
             s['id'] = str(uuid.uuid4())
             s['created_at'] = time.time()
-            write(self.root / 'projects' / project_id / 'snapshots' / (s['id'] + '.json'), s)
-            registry['projects'][project_id]['snapshot'] = s['id']
-            write(self.registry_path, registry)
+            self._publish_revision(registry, s)
             return {'changed': True, 'snapshot': s['id'], 'relation': edge}
 
     def undo_relation(self, project_id, older, rationale):
@@ -724,11 +813,16 @@ class Brain:
             snapshot['parent_snapshot'] = snapshot['id']
             snapshot['id'] = str(uuid.uuid4())
             snapshot['created_at'] = time.time()
-            validate(snapshot)
-            write(self.root / 'projects' / project_id / 'snapshots' / (snapshot['id'] + '.json'), snapshot)
-            registry['projects'][project_id]['snapshot'] = snapshot['id']
-            write(self.registry_path, registry)
+            self._publish_revision(registry, snapshot)
             return {'snapshot': snapshot['id'], 'undone': edge}
+
+    def _publish_revision(self, registry, snapshot):
+        from .state import ProjectState
+        project_id, snapshot_id = snapshot['project_id'], snapshot['id']
+        ProjectState(self, project_id).view(_current=snapshot)
+        write(self.root / 'projects' / project_id / 'snapshots' / (snapshot_id + '.json'), snapshot)
+        registry['projects'][project_id]['snapshot'] = snapshot_id
+        write(self.registry_path, registry)
 
     def retrieve(self, query, project_id=None, technologies=(), limit=5, max_chars=6000,
                  blocked=(), history=False, explain=False, max_age_days=None):
@@ -746,21 +840,9 @@ class Brain:
         # Do not load unrelated private evidence just to discover it is unapproved.
         approvals = {}
         for path in (self.root / 'shared').glob('*.json'):
-            try:
-                a = read(path)
-                if (not isinstance(a, dict) or a.get('schema_version') != VERSION
-                        or a.get('record_id') != path.stem or a.get('project_id') not in projects
-                        or a.get('permission') != 'shared'
-                        or type(a.get('review_after')) not in (int, float)
-                        or not (time.time() <= a['review_after'] < float('inf'))
-                        or not isinstance(a.get('technologies'), list) or not a['technologies']
-                        or not all(isinstance(t, str) and t for t in a['technologies'])
-                        or not set(a['technologies']).issubset(target)):
-                    continue
-            except (OSError, ValueError, TypeError):
-                # Invalid approvals confer no permission. They are never evidence.
-                continue
-            approvals.setdefault(a['project_id'], {})[a['record_id']] = a
+            approval = _sharing_approval(path, target)
+            if approval is not None and approval['project_id'] in projects:
+                approvals.setdefault(approval['project_id'], {})[approval['record_id']] = approval
         for origin in projects:
             own = origin == project_id
             if not own and origin not in approvals:
@@ -771,12 +853,8 @@ class Brain:
             replacements = {e['replacement'] for e in edges.values()}
             allowed = {}
             for r in s['records']:
-                if not own:
-                    a = approvals[origin].get(r['id'])
-                    if a is None:
-                        continue
-                    if a['review_after'] < time.time() or a.get('evidence_sha256') != r['evidence']['sha256']:
-                        continue
+                if not own and not _approval_covers_record(approvals[origin].get(r['id']), r):
+                    continue
                 rt = match_tokens(r['statement'])
                 observation = next((f.get('observed_at') for f in s['files']
                     if f['path'] == r['evidence']['path'] and f.get('sha256') == r['evidence']['sha256']), None)
@@ -847,8 +925,14 @@ class Brain:
         return '\n'.join(lines)
 
     def briefing(self, project_id, limit=3):
+        from .state import ProjectState
+        state = ProjectState(self, project_id).view()
+        current = self.snapshot(project_id, state['snapshot'])
+        return self._build_current_briefing(project_id, current, limit, state)
+
+    def _build_current_briefing(self, project_id, current, limit, state):
         from .briefing import build_briefing
-        current = self.snapshot(project_id)
+        from .state import bounded_view
         validate(current)
         parent = current.get('parent_snapshot')
         previous = self.snapshot(project_id, parent) if parent else None
@@ -874,19 +958,28 @@ class Brain:
                            'configured_revision': configured['configuration']['revision'],
                            'captured_revision': effective.get('revision')})
         briefing['source_health'] = health
-        from .state import ProjectState, bounded_view
-        briefing['maintained_state'] = bounded_view(ProjectState(self, project_id).view(), limit)
+        briefing['maintained_state'] = bounded_view(state, limit)
         return briefing
 
     def archive(self, project_id):
         # Evidence export, explicitly never classified as a recoverable source archive.
-        s = self.snapshot(project_id)
-        target = self.root / 'archives' / (s['id'] + '.zip')
-        payload = json.dumps(s, sort_keys=True).encode()
-        with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as z:
-            z.writestr('snapshot.json', payload)
-            z.writestr('manifest.json', json.dumps({'snapshot.json': digest(payload)}))
-        return self.verify_archive(target)
+        with self.lock(writable=False):
+            snapshot = self.snapshot(project_id)
+            target = self.root / 'archives' / (snapshot['id'] + '.zip')
+            payload = json.dumps(snapshot, sort_keys=True).encode()
+            fd, temporary = tempfile.mkstemp(prefix='.archive-', dir=target.parent)
+            try:
+                with os.fdopen(fd, 'wb') as stream:
+                    with zipfile.ZipFile(stream, 'w', zipfile.ZIP_DEFLATED) as archive:
+                        archive.writestr('snapshot.json', payload)
+                        archive.writestr('manifest.json', json.dumps({'snapshot.json': digest(payload)}))
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                report = self.verify_archive(temporary)
+                os.replace(temporary, target)
+                return dict(report, archive=str(target))
+            finally:
+                Path(temporary).unlink(missing_ok=True)
 
     @staticmethod
     def verify_archive(path):

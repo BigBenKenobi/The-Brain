@@ -23,8 +23,9 @@ not prove a live worker.
 
 A non-overlapping worker lock and a nonblocking writer-lock check prevent concurrent
 capture. Per-run file, byte, source and time budgets bound work without overwriting
-saved source configuration. The worker shares one scan deadline across due sources.
-If the deadline cuts off inventory before any files are processed, the worker records a
+saved source configuration. The worker shares one scan deadline across due sources
+and counts reads discarded because a file changed against the byte budget. If the
+deadline cuts off inventory before any files are processed, the worker records a
 deferral and retries while keeping the previous snapshot active.
 Transient failures persist bounded exponential retry
 state. Failed publication keeps the previous valid snapshot. Capacity exhaustion

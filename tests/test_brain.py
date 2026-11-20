@@ -135,6 +135,20 @@ class Lifecycle(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.b.verify_archive(archive)
 
+    def test_failed_reexport_preserves_verified_archive(self):
+        pid = self.ingest()
+        archive = Path(self.b.archive(pid)['archive'])
+        before = archive.read_bytes()
+        with patch('brain.core.zipfile.ZipFile.writestr', side_effect=OSError('fixture disk full')):
+            with self.assertRaisesRegex(OSError, 'disk full'):
+                self.b.archive(pid)
+        with patch.object(self.b, 'verify_archive', side_effect=ValueError('fixture verification failure')):
+            with self.assertRaisesRegex(ValueError, 'verification failure'):
+                self.b.archive(pid)
+        self.assertEqual(archive.read_bytes(), before)
+        self.assertTrue(self.b.verify_archive(archive)['integrity_verified'])
+        self.assertEqual(list(archive.parent.iterdir()), [archive])
+
     def test_budget_and_symlinks(self):
         (self.source / 'link.md').symlink_to(self.source / 'README.md')
         pid = self.ingest()

@@ -15,7 +15,9 @@ python3 -m brain --brain STORE model-check INPUT.json RESPONSE.json IDENTITY.jso
 Save the first command's JSON output privately. Inputs contain only screened retained
 records from one explicit project snapshot. They use full canonical excerpts within
 a bounded text budget, distributed across evidence roles and source paths. Coverage
-lists every omitted record, including deduplicated text. Each record carries evidence
+counts omissions by reason and includes up to 24 example record IDs. Export and
+checking share a 2,000,000-byte file limit. Previously exported version-1 inputs
+can still be checked within that limit. Each record carries evidence
 hash/span/snapshot and any reviewed replacement IDs. Answer keys are never included.
 
 The model response is a JSON object with `items` and `relationships` arrays. An item

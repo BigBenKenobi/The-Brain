@@ -3,7 +3,7 @@ import argparse
 import json
 from pathlib import Path
 from brain.core import Brain, read
-from brain.interpretation import build_input
+from brain.interpretation import build_input, serialize_input
 
 
 def prepare(corpus, output):
@@ -13,12 +13,12 @@ def prepare(corpus, output):
     checkpoints={}
     for label, checkpoint in report['checkpoints'].items():
         payload=build_input(brain,checkpoint['project_id'],snapshot_id=checkpoint['snapshot'])
-        (output/(label+'-input.json')).write_text(json.dumps(payload,indent=2)+'\n')
+        (output/(label+'-input.json')).write_text(serialize_input(payload), encoding='utf-8')
         text='\n'.join(r['text'] for r in payload['records']).lower()
         hits={entry['label']:entry['phrase'].lower() in text for entry in checkpoint['expectations']}
         checkpoints[label]={'input_sha256':payload['input_sha256'],
             'records':len(payload['records']),'text_chars':payload['coverage']['text_chars'],
-            'omitted':len(payload['coverage']['omitted']), 'answer_key_phrase_in_input':hits}
+            'omitted':sum(payload['coverage']['omitted_by_reason'].values()), 'answer_key_phrase_in_input':hits}
     result={'inference_run':False,'model_selected':False,'source_corpus':str(corpus),
         'checkpoints':checkpoints,'limitations':[
             'Phrase presence measures input coverage, not extraction quality or factual support.',

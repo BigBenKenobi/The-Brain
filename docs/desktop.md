@@ -47,8 +47,10 @@ If a capture writer temporarily blocks evidence reading, **Retry evidence** retr
 the same snapshot and page without restarting navigation.
 
 Search defaults to the selected project's private context. Shared knowledge requires
-explicit technology labels matching the original approval; the desktop never approves
-sharing. Search is the existing deterministic word matching, not a model answer.
+explicit technology labels matching the original approval. Opening a shared result
+rechecks its approval and displays only the approved statement, with source citation
+and excerpt copying. Paging is available in private project views. Search uses
+deterministic word matching.
 
 - `Ctrl+K`: focus search.
 - `Alt+Left`: close evidence, return from history/search, or return to the previous project.

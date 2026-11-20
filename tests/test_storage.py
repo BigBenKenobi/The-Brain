@@ -1,8 +1,12 @@
 from pathlib import Path
+import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 from brain.core import Brain, initialize, read, write, validate
+from brain.desktop_data import DesktopReader
 from brain.storage import blob_path, compact_copy, preview, materialize
 from brain.state import ProjectState
 
@@ -61,8 +65,53 @@ class StorageTests(unittest.TestCase):
         with patch('brain.core.write',side_effect=fail):
             with self.assertRaises(OSError): self.b.ingest(self.source)
         self.assertEqual(self.b.snapshot(self.pid),before)
-        self.b.ingest(self.source)
+        after = self.b.ingest(self.source)['snapshot']
         self.assertTrue(validate(self.b.snapshot(self.pid))['valid'])
+        self.assertEqual([row['snapshot'] for row in DesktopReader(self.b.root).history(self.pid)],
+                         [after, before['id']])
+        command = [sys.executable, '-m', 'brain', '--brain', str(self.b.root), 'history', self.pid]
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        self.assertEqual([row['snapshot'] for row in json.loads(result.stdout)], [before['id'], after])
+        self.assertEqual(preview(self.b)['snapshots'], 2)
+
+    def test_first_capture_failure_is_byte_preserved_without_blocking_compaction(self):
+        other = self.root / 'another-source'
+        other.mkdir()
+        (other / 'note.md').write_text('Decision: set aside fixture evidence for recovery.\n')
+
+        def fail(path, value):
+            if path == self.b.registry_path:
+                raise OSError('publication failure')
+            write(path, value)
+
+        before = set(self.hashes())
+        with patch('brain.core.write', side_effect=fail):
+            with self.assertRaisesRegex(OSError, 'publication failure'):
+                self.b.ingest(other)
+        self.assertEqual(preview(self.b)['snapshots'], 1)
+        orphans = {key: value for key, value in self.hashes().items() if key not in before}
+        self.assertTrue(any('/snapshots/' in key for key in orphans))
+        destination = self.root / 'compact'
+        report = compact_copy(self.b, destination)
+        self.assertEqual(report['snapshots_compared_equal'], 1)
+        for key, value in orphans.items():
+            self.assertEqual((destination / key).read_bytes(), value)
+
+    def test_unlinked_legacy_history_remains_listed_and_compacted(self):
+        first = self.b.snapshot(self.pid)
+        (self.source / 'changing.md').write_text('# Decision\nChanged during the legacy period.\n')
+        self.b.ingest(self.source)
+        second = self.b.snapshot(self.pid)
+        folder = self.b.root / 'projects' / self.pid / 'snapshots'
+        for snapshot in (first, second):
+            snapshot.pop('parent_snapshot')
+            write(folder / (snapshot['id'] + '.json'), snapshot)
+        third = self.b.ingest(self.source)['snapshot']
+        expected = {first['id'], second['id'], third}
+        self.assertEqual({row['snapshot'] for row in DesktopReader(self.b.root).history(self.pid)}, expected)
+        destination = self.root / 'compact'
+        self.assertEqual(compact_copy(self.b, destination)['snapshots_compared_equal'], 3)
+        self.assertEqual({row['snapshot'] for row in DesktopReader(destination).history(self.pid)}, expected)
 
     def legacy_fixture(self):
         # Simulate pre-blob physical storage while retaining real canonical evidence.
@@ -107,6 +156,27 @@ class StorageTests(unittest.TestCase):
             compact_copy(self.b,self.root/'unsafe-copy')
         self.assertFalse((self.root/'unsafe-copy').exists())
         self.assertEqual(list(external.iterdir()),[])
+
+    def test_compaction_runtime_links_stay_inside_the_copy(self):
+        runtime = self.b.root / 'runtime'
+        revision = runtime / 'pinned'
+        revision.mkdir(parents=True)
+        (revision / 'fixture.txt').write_text('Pinned runtime fixture.\n')
+        current = runtime / 'current'
+        current.symlink_to(revision, target_is_directory=True)
+        destination = self.root / 'compact'
+
+        with self.assertRaisesRegex(ValueError, 'unexpected symlink'):
+            compact_copy(self.b, destination)
+        self.assertFalse(destination.exists())
+
+        current.unlink()
+        current.symlink_to(revision.name, target_is_directory=True)
+        compact_copy(self.b, destination)
+        self.b.root.rename(self.root / 'offline-store')
+        copied = destination / 'runtime' / 'current'
+        self.assertTrue(copied.is_symlink())
+        self.assertEqual((copied / 'fixture.txt').read_text(), 'Pinned runtime fixture.\n')
 
     def test_capacity_counts_pending_blobs_before_publication(self):
         before=self.b.snapshot(self.pid)

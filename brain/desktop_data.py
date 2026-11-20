@@ -39,9 +39,9 @@ class DesktopReader:
 
     def project(self, project_id):
         with self.session() as brain:
-            snapshot = brain.snapshot(project_id)
-            briefing = brain.briefing(project_id, limit=3)
             state = ProjectState(brain, project_id).view()
+            snapshot = brain.snapshot(project_id, state['snapshot'])
+            briefing = brain._build_current_briefing(project_id, snapshot, 3, state)
             registry = read(brain.registry_path)
             return {'snapshot': snapshot['id'], 'created_at': snapshot['created_at'],
                     'briefing': briefing, 'state': state,
@@ -59,12 +59,8 @@ class DesktopReader:
 
     def history(self, project_id):
         with self.session() as brain:
-            active = brain.project(project_id)['snapshot']
-            rows = []
-            for path in (brain.root / 'projects' / project_id / 'snapshots').glob('*.json'):
-                value = read(path)
-                rows.append({'snapshot': value['id'], 'created_at': value['created_at'],
-                             'active': value['id'] == active})
+            rows = [{'snapshot': value['id'], 'created_at': value['created_at'], 'active': index == 0}
+                    for index, value in enumerate(brain.history_snapshots(project_id))]
             return sorted(rows, key=lambda row: row['created_at'], reverse=True)
 
     def capture(self, project_id, snapshot_id):
@@ -97,3 +93,7 @@ class DesktopReader:
             result['created_at'] = snapshot['created_at']
             result['total_lines'] = len(snapshot['evidence'][result['sha256']].splitlines())
             return result
+
+    def shared_evidence(self, project_id, snapshot_id, record_id, technologies, history=False):
+        with self.session() as brain:
+            return brain.shared_evidence(project_id, snapshot_id, record_id, technologies, history=history)

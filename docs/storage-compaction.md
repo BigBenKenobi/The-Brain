@@ -22,9 +22,10 @@ python3 -m brain --brain SOURCE_STORE compact-copy NEW_STORE
 ```
 
 Preview validates snapshots and reports evidence/storage counts and a zero-loss
-plan. `compact-copy` acquires the worker and writer locks, creates a private staging
-copy, converts embedded evidence there, compares every materialized snapshot for
-exact equality, checks other artifacts byte-for-byte, and verifies existing exports.
+plan. `compact-copy` acquires the worker and writer locks and creates a private
+staging copy. It converts and compares published snapshots, including unlinked
+legacy history, checks other artifacts byte-for-byte, and verifies existing exports.
+Runtime symlinks must use relative paths that resolve within the copied runtime.
 Only after checks pass is the destination published. Failure removes staging and
 leaves the original intact. Destination must be absent and outside the source store.
 
