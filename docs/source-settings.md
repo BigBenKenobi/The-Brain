@@ -21,6 +21,10 @@ python3 -m brain --brain /path/to/store relocate-source SOURCE_ID /new/project/l
 `configure-source` restores store defaults. `--new-source --project-id PROJECT_ID`
 adds an independent source. Relocation preserves identity and configuration;
 ambiguous legacy adoption requires an explicit `--adopt-legacy` mapping.
+Ingesting a path uses its active source registration. Location history is used
+only for projects whose sources have yet to be registered. If older registrations
+share a path, use `ingest PATH --project-id PROJECT_ID` to select the matching
+registration or `--source-id SOURCE_ID` to select an exact source.
 Sources start with automatic capture disabled. The bounded worker and optional timer are described in [automatic refresh](automatic-refresh.md).
 
 Successful observation, extraction time, historical status, and approval expiry
@@ -28,8 +32,8 @@ are separate facts. An unchanged successful read updates observation without
 re-extracting evidence or renewing sharing approval. Unknown legacy dates stay
 unknown. `context --max-age-days N` filters by successful observation and excludes
 unknown dates. Unreadable or unvisited files cannot gain a successful observation.
-Capture health distinguishes complete, partial and failed attempts and exposes
-coverage limitations. A missing source keeps the last usable snapshot available.
+Capture health distinguishes complete, partial, deferred and failed attempts and
+exposes coverage limitations. A missing source keeps the last usable snapshot available.
 
 Briefings show source health and bounded supporting excerpts. Explicit correction
 relationships suppress obsolete records without granting sharing permission;
@@ -48,8 +52,11 @@ python3 -m brain --brain /path/to/store upgrade-store --backup /separate/new/bac
 ```
 
 Run this against a coherent disposable copy first. The command holds the writer
-lock, copies the store and compatible reader code, verifies copied file hashes
-and snapshot structure, and only then changes the configuration writer version.
+lock while it stages the store and compatible reader code. It verifies copied file
+hashes, snapshot structure, and that preserved symbolic links are relative and
+resolve inside the copied store. The command publishes the verified backup before
+changing the writer version. A verification failure leaves the destination available
+for retry.
 The backup destination must not exist and must be outside the store. Existing
 snapshots and approval files are not rewritten. Old version-1 writers reject the
 version-4 configuration. For rollback, stop writers and restore the complete

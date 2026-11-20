@@ -1,12 +1,14 @@
 """Project Brain: canonical JSON snapshots and conservative local retrieval."""
 from __future__ import annotations
 import contextlib
+import errno
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import stat
+import tempfile
 import time
 import uuid
 import zipfile
@@ -57,6 +59,12 @@ def initialize(root):
         (root / name).mkdir(exist_ok=True)
     return {'brain': str(root), 'schema_version': read(root / 'config.json')['schema_version']}
 
+class CaptureDeadlineExceeded(TimeoutError):
+    """The scan deadline expired before any files could be inventoried."""
+
+    reason = 'scan_deadline'
+
+
 class Brain:
     def __init__(self, root):
         self.root = Path(root).resolve()
@@ -88,8 +96,8 @@ class Brain:
 
     def upgrade_store(self, backup):
         """Guard older writers only after creating a coherent code/store backup."""
-        import shutil
-        backup = Path(backup).resolve()
+        requested = Path(backup)
+        backup = requested.resolve()
         if backup == self.root or self.root in backup.parents or backup in self.root.parents:
             raise ValueError('Backup must be outside the store')
         from .refresh import RefreshWorker
@@ -100,28 +108,66 @@ class Brain:
                 config = read(self.root / 'config.json')
                 if config['schema_version'] == STORE_VERSION:
                     return {'changed': False, 'schema_version': STORE_VERSION}
-                backup.mkdir(parents=True, exist_ok=False, mode=0o700)
-                shutil.copytree(self.root, backup / 'store')
-                shutil.copytree(Path(__file__).parent, backup / 'code' / 'brain',
-                                ignore=shutil.ignore_patterns('__pycache__'))
-                hashes = {}
-                for path in (backup / 'store').rglob('*'):
-                    if path.is_file() and path.name != '.lock':
-                        relative = str(path.relative_to(backup / 'store'))
-                        hashes[relative] = digest(path.read_bytes())
-                        if hashes[relative] != digest((self.root / relative).read_bytes()):
-                            raise ValueError('Backup copy verification failed')
-                count = 0
-                for path in (backup / 'store' / 'projects').glob('*/snapshots/*.json'):
-                    validate(self.snapshot(path.parent.parent.name, path.stem))
-                    count += 1
-                write(backup / 'rollback.json', {'store': str(self.root), 'schema_version': config['schema_version'],
-                    'snapshots_validated': count, 'store_file_sha256': hashes,
-                    'instruction': 'Stop all Brain writers; restore store/ and use code/ together. Historical snapshots were not rewritten.'})
+                if requested.is_symlink() or os.path.lexists(backup):
+                    raise FileExistsError(errno.EEXIST, 'Backup destination already exists', requested)
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                with tempfile.TemporaryDirectory(prefix='.brain-upgrade-', dir=backup.parent) as temporary:
+                    staging = Path(temporary)
+                    count = self._prepare_upgrade_backup(staging, config['schema_version'])
+                    if os.path.lexists(backup):
+                        raise FileExistsError(errno.EEXIST, 'Backup destination already exists', backup)
+                    staging.rename(backup)
                 config['schema_version'] = STORE_VERSION
                 write(self.root / 'config.json', config)
                 self.config = config
                 return {'changed': True, 'schema_version': STORE_VERSION, 'backup': str(backup), 'snapshots_validated': count}
+
+    def _prepare_upgrade_backup(self, staging, schema_version):
+        import shutil
+        store_copy = staging / 'store'
+        shutil.copytree(self.root, store_copy, symlinks=True)
+        shutil.copytree(Path(__file__).parent, staging / 'code' / 'brain',
+                        ignore=shutil.ignore_patterns('__pycache__'))
+        hashes, links = {}, {}
+        for path in self.root.rglob('*'):
+            relative = str(path.relative_to(self.root))
+            copied_path = store_copy / relative
+            if path.is_symlink():
+                links[relative] = os.readlink(path)
+                if not copied_path.is_symlink() or os.readlink(copied_path) != links[relative]:
+                    raise ValueError('Backup symbolic link verification failed')
+                target = Path(links[relative])
+                target_path = copied_path.parent / target
+                prefixes = (target_path, *target_path.parents)
+                message = f'Backup symbolic link must resolve inside the copied store ({relative})'
+                try:
+                    # Check intermediate paths too so a link cannot leave and reenter the copy.
+                    if target.is_absolute() or any(
+                            not prefix.resolve(strict=True).is_relative_to(store_copy)
+                            for prefix in prefixes if prefix.is_relative_to(store_copy)):
+                        raise ValueError(message)
+                except (OSError, RuntimeError) as error:
+                    raise ValueError(message) from error
+            elif path.is_file() and path.name != '.lock':
+                hashes[relative] = digest(path.read_bytes())
+                if copied_path.is_symlink() or digest(copied_path.read_bytes()) != hashes[relative]:
+                    raise ValueError('Backup copy verification failed')
+        copied = Brain(store_copy)
+        count = 0
+        for project_id, project in read(copied.registry_path)['projects'].items():
+            active = project.get('snapshot')
+            if not active:
+                continue
+            snapshots = store_copy / 'projects' / project_id / 'snapshots'
+            snapshot_ids = {path.stem for path in snapshots.glob('*.json')}
+            snapshot_ids.add(active)
+            for snapshot_id in sorted(snapshot_ids):
+                validate(copied.snapshot(project_id, snapshot_id))
+                count += 1
+        write(staging / 'rollback.json', {'store': str(self.root), 'schema_version': schema_version,
+            'snapshots_validated': count, 'store_file_sha256': hashes, 'store_symlink_targets': links,
+            'instruction': 'Stop all Brain writers; restore store/ and use code/ together. Historical snapshots were not rewritten.'})
+        return count
 
     def configure_source(self, source_id, *, excluded_paths=None, historical=None,
                          budgets=None, enabled=None, new_location=None):
@@ -272,8 +318,9 @@ class Brain:
         try:
             return self._ingest(source, project_id, excluded_paths, historical, **options)
         except OSError as error:
-            if isinstance(error, BlockingIOError):
-                raise  # A background worker must not wait again just to log contention.
+            if isinstance(error, (BlockingIOError, CaptureDeadlineExceeded)):
+                # Contention stays nonblocking. The writer already recorded deadline deferrals.
+                raise
             registry = read(self.registry_path)
             sid = options.get('source_id')
             path = str(Path(source).resolve())
@@ -290,7 +337,7 @@ class Brain:
 
     def _ingest(self, source, project_id=None, excluded_paths=None, historical=None,
                *, source_id=None, budgets=None, new_source=False, adopt_legacy=False, automatic=False,
-               max_store_bytes=None, runtime_budgets=None):
+               max_store_bytes=None, runtime_budgets=None, runtime_deadline=None):
         from .sources import BUDGETS, location, resolve
         # Resolution and publication share one writer lock. No half-saved settings.
         source = location(self.root, source)
@@ -298,21 +345,33 @@ class Brain:
         with self.lock(blocking=not automatic):
             registry = read(self.registry_path)
             projects = registry['projects']
+            sources = registry.get('sources', {})
             if source_id:
-                configured = registry.get('sources', {}).get(source_id)
+                configured = sources.get(source_id)
                 if not configured:
                     raise ValueError('Unknown source ID')
                 if project_id and project_id != configured['project_id']:
                     raise ValueError('Source belongs to another project')
                 project_id = configured['project_id']
-            if project_id:
-                if project_id not in projects:
-                    raise ValueError('Unknown project ID')
             else:
-                matches = [p for p, v in projects.items() if str(source) in v['locations']]
-                if len(matches) > 1:
-                    raise ValueError('Ambiguous project location; supply project ID')
-                project_id = matches[0] if matches else None
+                active = [entry for entry in sources.values() if entry['location'] == str(source)]
+                if explicit_project and active:
+                    active = [entry for entry in active if entry['project_id'] == project_id]
+                    if not active:
+                        raise ValueError('Location already registered to another project')
+                if len(active) > 1:
+                    raise ValueError('Ambiguous source location; supply source ID')
+                if active:
+                    project_id = active[0]['project_id']
+                elif project_id is None:
+                    registered = {entry['project_id'] for entry in sources.values()}
+                    matches = [p for p, entry in projects.items()
+                               if p not in registered and str(source) in entry['locations']]
+                    if len(matches) > 1:
+                        raise ValueError('Ambiguous project location; supply project ID')
+                    project_id = matches[0] if matches else None
+            if project_id is not None and project_id not in projects:
+                raise ValueError('Unknown project ID')
             project_id = project_id or str(uuid.uuid4())
             old = self.snapshot(project_id) if project_id in projects and projects[project_id].get('snapshot') else {'files': [], 'records': [], 'extractor': None}
             # Preserve the callable API's existing in-memory budget overrides.
@@ -343,13 +402,28 @@ class Brain:
             for r in old['records']:
                 oldrecords.setdefault(r['evidence']['path'], []).append(r)
             start = time.monotonic()
+            deadline = start + limits['max_seconds']
+            if runtime_deadline is not None:
+                deadline = min(deadline, runtime_deadline)
             files, records, seen, evidence = [], [], {}, {}
             metrics = {'files_seen': 0, 'bytes_read': 0, 'extractions': 0, 'cache_hits': 0, 'model_calls': 0}
             coverage = []
             def walk_error(error):
                 coverage.append({'reason': 'inaccessible_directory', 'path': prefix + os.path.relpath(error.filename, source), 'source_id': source_id})
+
+            def inventory_exhausted(directory, *, for_file=False):
+                has_time = time.monotonic() < deadline
+                has_file_budget = not for_file or metrics['files_seen'] < limits['max_files']
+                if has_time and has_file_budget:
+                    return False
+                coverage.append({'reason': 'inventory_budget_exhausted', 'path': prefix + str(Path(directory).relative_to(source)), 'source_id': source_id, 'detail': 'Remaining tree not inventoried'})
+                return True
+
             halted = False
-            for directory, dirs, names in os.walk(source, followlinks=False, onerror=walk_error):
+            directories = () if inventory_exhausted(source) else os.walk(source, followlinks=False, onerror=walk_error)
+            for directory, dirs, names in directories:
+                if inventory_exhausted(directory):
+                    break
                 dirs.sort()
                 names.sort(key=lambda n: (not n.lower().startswith(('readme', 'architecture', 'decision')), n))
                 for d in dirs[:]:
@@ -358,8 +432,7 @@ class Brain:
                         files.append({'path': prefix + str(p.relative_to(source)), 'source_id': source_id, 'status': 'excluded_directory', 'reason': 'explicit scoped exclusion; subtree not inspected' if str(p.relative_to(source)) in excluded_paths else 'dependency/cache/history or symlink; subtree not inspected'})
                         dirs.remove(d)
                 for name in names:
-                    if metrics['files_seen'] >= limits['max_files'] or time.monotonic() - start > limits['max_seconds']:
-                        coverage.append({'reason': 'inventory_budget_exhausted', 'path': prefix + str(Path(directory).relative_to(source)), 'source_id': source_id, 'detail': 'Remaining tree not inventoried'})
+                    if inventory_exhausted(directory, for_file=True):
                         halted = True
                         break
                     p = Path(directory) / name
@@ -436,6 +509,12 @@ class Brain:
                 if halted:
                     break
             metrics['elapsed_seconds'] = round(time.monotonic() - start, 6)
+            if not metrics['files_seen'] and any(w['reason'] == 'inventory_budget_exhausted' for w in coverage):
+                if source_id in sources:
+                    write(self.root / 'health' / (source_id + '.json'), {
+                        'source_id': source_id, 'attempted_at': attempted_at, 'finished_at': time.time(),
+                        'state': 'deferred', 'error': CaptureDeadlineExceeded.reason})
+                raise CaptureDeadlineExceeded('Capture deferred: deadline reached before inventory')
             if not files and any(w['reason'] == 'inaccessible_directory' for w in coverage):
                 raise OSError('Source inventory unavailable; previous snapshot preserved')
             sid = str(uuid.uuid4())
@@ -784,9 +863,9 @@ class Brain:
             attempt = captured
             health_path = self.root / 'health' / (sid + '.json')
             if health_path.exists():
-                failed = read(health_path)
-                if failed.get('attempted_at', 0) > captured.get('attempted_at', 0):
-                    attempt = failed
+                recorded = read(health_path)
+                if recorded.get('attempted_at', 0) > captured.get('attempted_at', 0):
+                    attempt = recorded
             effective = current.get('source_configurations', {}).get(sid, {}).get('configuration', {})
             health.append({'source_id': sid, 'state': attempt.get('state', 'unknown'),
                            'last_attempt_at': attempt.get('attempted_at'),

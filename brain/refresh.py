@@ -6,7 +6,7 @@ import contextlib
 import fcntl
 from pathlib import Path
 import time
-from .core import read, write
+from .core import CaptureDeadlineExceeded, read, write
 
 DEFAULT_POLICY = {
     'paused': True, 'interval_seconds': 900, 'retry_seconds': 60,
@@ -93,7 +93,7 @@ class RefreshWorker:
                 status = 'running'
             elif previous.get('state') == 'running':
                 status = 'failed'  # A saved marker is not evidence of a live worker.
-            elif status not in ('partial', 'failed') and stale:
+            elif status not in ('partial', 'failed', 'deferred') and stale:
                 status = 'stale'
             sources.append({'source_id': sid, 'project_id': configured['project_id'],
                 **previous, 'state': status, 'stale': stale, 'enabled': enabled, 'last_success_at': success})
@@ -120,14 +120,13 @@ class RefreshWorker:
                           if s['configuration']['enabled']
                           and state['sources'].get(s['id'], {}).get('next_due', 0) <= now]
             candidates.sort(key=lambda s: (state['sources'].get(s['id'], {}).get('last_attempt_at', 0), s['id']))
-            started = time.monotonic()
+            deadline = time.monotonic() + policy['max_run_seconds']
             remaining_bytes, remaining_files = policy['max_bytes_per_run'], policy['max_files_per_run']
             results = []
             for configured in candidates[:policy['max_sources_per_run']]:
                 if self.policy()['paused']:
                     break
-                remaining_seconds = int(policy['max_run_seconds'] - (time.monotonic() - started))
-                if remaining_seconds < 1 or remaining_bytes < 1 or remaining_files < 1:
+                if time.monotonic() >= deadline or remaining_bytes < 1 or remaining_files < 1:
                     break
                 sid = configured['id']
                 previous = state['sources'].setdefault(sid, {})
@@ -135,8 +134,8 @@ class RefreshWorker:
                 write(self.state_path, state)
                 try:
                     capture = self.brain.ingest(configured['location'], source_id=sid, automatic=True,
-                        max_store_bytes=policy['max_store_bytes'], runtime_budgets={
-                            'max_seconds': remaining_seconds, 'max_total_bytes': remaining_bytes,
+                        max_store_bytes=policy['max_store_bytes'], runtime_deadline=deadline, runtime_budgets={
+                            'max_seconds': policy['max_run_seconds'], 'max_total_bytes': remaining_bytes,
                             'max_files': remaining_files})
                     remaining_bytes -= capture['metrics']['bytes_read']
                     remaining_files -= capture['metrics']['files_seen']
@@ -148,6 +147,9 @@ class RefreshWorker:
                         previous.pop('error', None)
                     else:
                         self.retry(previous, now, policy, 'partial_capture')
+                except CaptureDeadlineExceeded as error:
+                    previous.update(state='deferred', last_finished_at=time.time())
+                    self.retry(previous, now, policy, error.reason)
                 except (OSError, ValueError) as error:
                     previous.update(state='failed', last_finished_at=time.time())
                     reason = 'storage_capacity' if isinstance(error, OSError) and str(error).startswith('Capture deferred: storage capacity') else type(error).__name__
@@ -158,7 +160,8 @@ class RefreshWorker:
                 write(self.state_path, state)
             state['last_run'] = {'attempted_at': now, 'finished_at': time.time(), 'processed': len(results)}
             write(self.state_path, state)
-            outcome = 'failed' if any(r['state'] == 'failed' for r in results) else 'partial' if any(r['state'] == 'partial' for r in results) else 'idle'
+            outcomes = {r['state'] for r in results}
+            outcome = next((status for status in ('failed', 'partial', 'deferred') if status in outcomes), 'idle')
             return {'state': 'paused' if self.policy()['paused'] else outcome, 'processed': len(results), 'results': results}
 
     @staticmethod
