@@ -89,3 +89,28 @@ class ConsolidationTests(unittest.TestCase):
         self.assertEqual(target['currency'],'uncertain')
         from brain.briefing import render_briefing
         self.assertIn('Consolidation needs review',render_briefing(self.b.briefing(self.pid)))
+
+    def test_record_precedence_cannot_reverse_published_item_precedence(self):
+        self.state.relate(self.a['id'], self.bitem['id'], 'supersedes', self.a['claims'][0],
+                          'Item A replaced item B')
+        before = self.state.view()
+        with self.assertRaisesRegex(ValueError, 'Cyclic supersession'):
+            self.b.relate(self.pid, self.a['claims'][0]['record_id'], self.bitem['claims'][0]['record_id'],
+                          'supersedes', 'Conflicting record review')
+        self.assertEqual(self.state.view(), before)
+        self.b.briefing(self.pid)
+
+    def test_matching_derived_currency_cannot_hide_incompatible_journal_currency(self):
+        a, b = self.a, self.bitem
+        other = next(item for item in self.state.view()['items'].values() if item['claims'][0]['path'] == 'c.md')
+        self.state.correct(a['id'], {'currency': 'active'}, a['claims'][0], 'Reviewed as active')
+        for item in (a, b):
+            self.b.relate(self.pid, item['claims'][0]['record_id'], other['claims'][0]['record_id'],
+                          'supersedes', 'Reviewed replacement')
+        before = self.state.view()
+        self.assertTrue(all(before['items'][item['id']]['currency'] == 'superseded' for item in (a, b)))
+        head = self.state.head.read_bytes()
+        with self.assertRaisesRegex(ValueError, 'interpretation conflict: currency'):
+            self.merge()
+        self.assertEqual(self.state.head.read_bytes(), head)
+        self.assertEqual(self.state.view(), before)

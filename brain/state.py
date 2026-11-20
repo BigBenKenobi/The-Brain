@@ -112,14 +112,14 @@ class ProjectState:
             raise ValueError('State evidence record is absent from the cited project snapshot')
         return snapshot, record
 
-    def view(self, *, max_snapshots=64, max_items=2000, _events=None):
+    def view(self, *, max_snapshots=64, max_items=2000, _events=None, _current=None):
         if type(max_snapshots) is not int or not 1 <= max_snapshots <= 1000:
             raise ValueError('State snapshot budget must be 1..1000')
         if type(max_items) is not int or not 1 <= max_items <= 10000:
             raise ValueError('State item budget must be 1..10000')
-        self._snapshots = {}
-        current = self.brain.snapshot(self.project_id)
+        current = self.brain.snapshot(self.project_id) if _current is None else _current
         validate(current)
+        self._snapshots = {current['id']: current}
         active_records = {r['id'] for r in current['records']}
         items, visited, snapshots = {}, set(), 0
         cursor = current['id']
@@ -129,9 +129,11 @@ class ProjectState:
             if cursor in visited:
                 raise ValueError('Cyclic snapshot lineage')
             visited.add(cursor)
-            snapshot = self.brain.snapshot(self.project_id, cursor)
-            validate(snapshot)
-            self._snapshots[cursor] = snapshot
+            snapshot = self._snapshots.get(cursor)
+            if snapshot is None:
+                snapshot = self.brain.snapshot(self.project_id, cursor)
+                validate(snapshot)
+                self._snapshots[cursor] = snapshot
             snapshots += 1
             for record in snapshot['records']:
                 iid = item_id(self.project_id, record['id'])
@@ -142,7 +144,8 @@ class ProjectState:
                     continue
                 items[iid] = seed(self.project_id, snapshot, record)
             legacy_boundary = 'parent_snapshot' not in snapshot
-            physical = read(self.brain.root / 'projects' / self.project_id / 'snapshots' / (cursor + '.json'))
+            physical = _current if _current is not None and cursor == current['id'] else read(
+                self.brain.root / 'projects' / self.project_id / 'snapshots' / (cursor + '.json'))
             cursor = physical['content_snapshot'] if physical.get('storage_format') == 'observation-1' else snapshot.get('parent_snapshot')
         catalog = load_catalog(self.brain, self.project_id)
         if catalog:
@@ -204,15 +207,16 @@ class ProjectState:
                 relations.append({'id': event['id'], 'from': event['from'], 'to': event['to'],
                                   'kind': event['kind'], 'rationale': event['rationale'],
                                   'evidence': reference(snapshot, record)})
-        # Existing reviewed record precedence remains authoritative for candidate currency.
+        # Validate the complete precedence graph even when a view omits endpoints.
+        record_edges = []
         for edge in current.get('relations', []):
             older, replacement = item_id(self.project_id, edge['older']), item_id(self.project_id, edge['replacement'])
+            record_edges.append({'id': 'record:' + edge['older'], 'from': replacement, 'to': older,
+                'kind': 'supersedes', 'rationale': edge['rationale'], 'origin': 'reviewed_record_precedence'})
             if older in items:
                 items[older]['currency'] = 'superseded'
-            if older in items and replacement in items:
-                relations.append({'id': 'record:' + edge['older'], 'from': replacement, 'to': older,
-                    'kind': 'supersedes', 'rationale': edge['rationale'], 'origin': 'reviewed_record_precedence'})
-        self.validate_relations(relations)
+        self.validate_relations(relations + record_edges)
+        relations.extend(edge for edge in record_edges if edge['from'] in items and edge['to'] in items)
         for edge in relations:
             if edge['kind'] == 'supersedes':
                 items[edge['to']]['currency'] = 'superseded'
@@ -330,6 +334,8 @@ class ProjectState:
         events = self.events()
         event = dict(event, id=str(uuid.uuid4()), project_id=self.project_id, created_at=time.time(),
                      authority='explicit_local_interpretation', evidence_strength='reported')
+        # A journal edit becomes visible only when the reader can replay it.
+        self.view(_events=events + [event])
         write(self.root / 'events' / (event['id'] + '.json'), event)
         previous_version = read(self.head).get('version', 1) if self.head.exists() else 1
         version = max(previous_version, 3 if event['type'] == 'verify' else 2 if event['type'] == 'consolidate' else 1)
@@ -434,7 +440,6 @@ class ProjectState:
             state = self.view()
             refs = self._seed_refs(state, [source, target])
             snapshot, record = self.evidence(evidence)
-            self.validate_relations(state['relationships'] + [{'from': source, 'to': target, 'kind': kind}])
             return self._append({'type': 'relate', 'from': source, 'to': target, 'kind': kind,
                 'evidence': reference(snapshot, record), 'rationale': rationale, 'seeds': refs})
 
@@ -447,9 +452,6 @@ class ProjectState:
                 raise ValueError('Undo requires an existing correction, relationship or consolidation event')
             if any(e.get('target') == event_id for e in events if e['type'] == 'undo'):
                 raise ValueError('Event is already undone')
-            # Removing an earlier correction must not publish an unreadable
-            # dependent consolidation. Undo the dependent grouping first.
-            self.view(_events=events + [{'id': str(uuid.uuid4()), 'type': 'undo', 'target': event_id}])
             return self._append({'type': 'undo', 'target': event_id, 'rationale': rationale})
 
     @staticmethod

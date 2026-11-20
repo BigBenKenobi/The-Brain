@@ -63,10 +63,12 @@ rationale and expiry. `archives/` contains optional evidence-only ZIP exports.
 
 A Linux/POSIX advisory lock serializes ingestion and promotion. Snapshots are
 written and fsynced before an atomic registry replacement publishes them. Readers
-see a complete old or new snapshot. A failure before publication leaves the old
-snapshot active; abandoned snapshots are harmless. Rerunning ingestion is supported;
-resuming a partially processed individual snapshot is not. Directory fsync and
-power-loss guarantees across all filesystem implementations remain future work.
+see a complete old or new snapshot. History, backup verification and compaction
+follow the published pointer and its predecessors, with support for older unlinked
+snapshots. A failed publication leaves any staged files outside that lineage.
+Compact copies keep those files byte-for-byte outside published history. Rerun
+ingestion from the start after a failure. Directory fsync and power-loss guarantees
+across all filesystem implementations remain future work.
 
 Each accepted file is hashed and screened on every ingestion. Unchanged extracts
 are reused by path, hash and extractor version. Identical files share evidence and

@@ -196,17 +196,19 @@ def main(argv=None):
                 from .storage import preview, compact_copy
                 result = preview(b) if args.command == 'storage-preview' else compact_copy(b, args.destination)
             elif args.command == 'model-input':
-                from .interpretation import build_input
-                result = build_input(b, args.project_id, max_records=args.max_records, max_chars=args.max_chars)
+                from .interpretation import build_input, serialize_input
+                payload = build_input(b, args.project_id, max_records=args.max_records, max_chars=args.max_chars)
+                sys.stdout.write(serialize_input(payload))
+                return 0
             elif args.command == 'model-check':
-                from .interpretation import validate_proposals
+                from .interpretation import MAX_INPUT_BYTES, validate_proposals
                 def bounded_file(path, limit):
                     with open(path, 'rb') as stream:
                         value = stream.read(limit + 1)
                     if len(value) > limit:
                         raise ValueError('Model evaluation file exceeds byte budget')
                     return value.decode('utf-8')
-                result = validate_proposals(b, json.loads(bounded_file(args.input_file, 2000000)),
+                result = validate_proposals(b, json.loads(bounded_file(args.input_file, MAX_INPUT_BYTES)),
                     bounded_file(args.response_file, 65536),
                     model_identity=json.loads(bounded_file(args.identity_file, 8000)))
             elif args.command == 'refresh':
@@ -218,12 +220,10 @@ def main(argv=None):
             elif args.command == 'evidence':
                 result = b.retained_evidence(args.project_id, args.path, args.start_line, args.end_line, args.snapshot)
             elif args.command == 'history':
-                project = b.project(args.project_id)
-                from .core import read
                 result = []
-                for path in sorted((b.root / 'projects' / args.project_id / 'snapshots').glob('*.json')):
-                    snap = b.snapshot(args.project_id, path.stem)
-                    result.append({'snapshot': snap['id'], 'created_at': snap['created_at'], 'active': snap['id'] == project['snapshot'], 'records': len(snap['records'])})
+                for index, value in enumerate(b.history_snapshots(args.project_id)):
+                    snap = b.snapshot(args.project_id, value['id'])
+                    result.append({'snapshot': snap['id'], 'created_at': snap['created_at'], 'active': index == 0, 'records': len(snap['records'])})
                 result.sort(key=lambda item: item['created_at'])
             elif args.command == 'review-retirement':
                 result = b.review_retirement(args.project_id, args.summary, args.known_gap, args.record_id)

@@ -239,6 +239,10 @@ class RefreshTests(unittest.TestCase):
 
     def test_partial_write_has_no_successful_observation_and_retries(self):
         self.enable()
+        size = (self.source / 'decision.md').stat().st_size
+        other = self.source / 'other.md'
+        other.write_text('Keep this file for a later pass.\n')
+        self.worker.configure(max_bytes_per_run=size + other.stat().st_size - 1)
         import os
         original = os.fstat
         calls = []
@@ -253,7 +257,11 @@ class RefreshTests(unittest.TestCase):
         with patch('brain.core.os.fstat', side_effect=changing):
             result = self.worker.run_once()['results'][0]
         self.assertEqual(result['state'], 'partial')
-        entry = self.b.snapshot(self.pid)['files'][0]
+        snapshot = self.b.snapshot(self.pid)
+        entry, skipped = snapshot['files']
         self.assertNotIn('observed_at', entry)
         self.assertEqual(entry['status'], 'unprocessed')
+        self.assertEqual(snapshot['metrics']['bytes_read'], size)
+        self.assertEqual(skipped['reason'], 'byte budget')
+        self.assertNotIn('observed_at', skipped)
         self.assertGreater(result['next_due'], result['last_attempt_at'])

@@ -8,7 +8,7 @@ import shutil
 import tempfile
 import uuid
 import zlib
-from .core import Brain, STORE_VERSION, digest, read, validate, write
+from .core import Brain, STORE_VERSION, _internal_link_target, digest, read, validate, write
 
 MAX_BLOB_BYTES = 128 * 1024 * 1024
 
@@ -92,16 +92,22 @@ def materialize(root, stored):
     return result
 
 
+def _published_snapshots(brain):
+    for project_id in read(brain.registry_path)['projects']:
+        for stored in brain.history_snapshots(project_id):
+            path = brain.root / 'projects' / project_id / 'snapshots' / (stored['id'] + '.json')
+            yield path, stored
+
+
 def preview(brain):
     totals = {'snapshots': 0, 'physical_snapshot_bytes': 0, 'embedded_evidence_bytes': 0}
     unique = {}
     with brain.lock(writable=False):
-        for path in (brain.root/'projects').glob('*/snapshots/*.json'):
-            snapshot = brain.snapshot(path.parent.parent.name, path.stem)
+        for path, physical in _published_snapshots(brain):
+            snapshot = brain.snapshot(physical['project_id'], physical['id'])
             validate(snapshot)
             totals['snapshots'] += 1
             totals['physical_snapshot_bytes'] += path.stat().st_size
-            physical = read(path)
             for sha, text in physical.get('evidence', {}).items():
                 totals['embedded_evidence_bytes'] += len(text.encode())
             for sha, text in snapshot['evidence'].items():
@@ -183,23 +189,23 @@ def compact_copy(brain, destination):
     staging = Path(tempfile.mkdtemp(prefix='.brain-compact-', dir=destination.parent))
     try:
         with coherent_read(brain):
+            runtime = brain.root / 'runtime'
             for path in brain.root.rglob('*'):
                 if path.is_symlink():
-                    relative = path.relative_to(brain.root)
-                    if relative.parts[0] != 'runtime' or not path.resolve().is_relative_to(brain.root/'runtime'):
-                        raise ValueError('Compaction requires ordinary store files; unexpected symlink')
+                    target = _internal_link_target(path, brain.root) if path.is_relative_to(runtime) else None
+                    if target is None or not target.is_relative_to(runtime):
+                        raise ValueError(f'Compaction found an unexpected symlink at {path.relative_to(brain.root)}')
             original_state = verify_derived_state(brain)
             shutil.copytree(brain.root, staging, dirs_exist_ok=True, symlinks=True)
             config = read(staging/'config.json');config['schema_version'] = STORE_VERSION
             write(staging/'config.json', config)
             original_hashes, count = {}, 0
             original_bytes = sum(p.stat().st_size for p in brain.root.rglob('*') if p.is_file())
-            for path in (brain.root/'projects').glob('*/snapshots/*.json'):
+            for path, physical in _published_snapshots(brain):
                 relative = path.relative_to(brain.root)
                 original_hashes[str(relative)] = digest(path.read_bytes())
-                snapshot = brain.snapshot(path.parent.parent.name, path.stem)
+                snapshot = brain.snapshot(physical['project_id'], physical['id'])
                 validate(snapshot)
-                physical = read(path)
                 if physical.get('storage_format') != 'observation-1':
                     encoded, blobs = encode(staging, snapshot)
                     store_blobs(staging, snapshot['project_id'], blobs)

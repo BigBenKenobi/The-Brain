@@ -1,10 +1,14 @@
 import copy
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+from brain.__main__ import main
 from brain.core import Brain, initialize
-from brain.interpretation import build_input, validate_proposals
+from brain.interpretation import MAX_INPUT_BYTES, MAX_OMISSION_EXAMPLES, build_input, fingerprint, serialize_input, validate_proposals
 
 
 class InterpretationTests(unittest.TestCase):
@@ -73,6 +77,45 @@ class InterpretationTests(unittest.TestCase):
         self.assertEqual(self.payload,build_input(self.brain,self.pid))
         with self.assertRaises(ValueError):
             build_input(self.brain,self.pid,max_records=0)
+
+    def test_cli_round_trip_with_bounded_omission_examples(self):
+        source = self.root / 'source'
+        (source / 'repeated.md').write_text('# Decision\nUse evidence from the owning project.\n' * 80)
+        self.brain.ingest(source)
+        command = ['--brain', str(self.brain.root)]
+        with redirect_stdout(StringIO()) as stdout:
+            self.assertEqual(main(command + ['model-input', self.pid, '--max-records', '1']), 0)
+        exported = stdout.getvalue().encode('utf-8')
+        self.assertLessEqual(len(exported), MAX_INPUT_BYTES)
+        coverage = json.loads(exported)['coverage']
+        self.assertEqual(len(coverage['omitted']), MAX_OMISSION_EXAMPLES)
+        self.assertEqual(coverage['omitted_by_reason'], {'duplicate_text': 79, 'input_budget': 2})
+
+        input_path, response_path, identity_path = (self.root / name for name in ('input.json', 'response.json', 'model.json'))
+        input_path.write_bytes(exported)
+        response_path.write_text('{"items": [], "relationships": []}')
+        identity_path.write_text(json.dumps(self.identity))
+        with redirect_stdout(StringIO()) as stdout:
+            self.assertEqual(main(command + ['model-check', str(input_path), str(response_path), str(identity_path)]), 0)
+        self.assertEqual(json.loads(stdout.getvalue())['items'], [])
+
+    def test_cli_rejects_over_budget_output_before_writing(self):
+        size = len(serialize_input(self.payload).encode('utf-8'))
+        with patch('brain.interpretation.MAX_INPUT_BYTES', size - 1):
+            with redirect_stdout(StringIO()) as stdout, redirect_stderr(StringIO()) as stderr:
+                status = main(['--brain', str(self.brain.root), 'model-input', self.pid])
+        self.assertEqual(status, 1)
+        self.assertEqual(stdout.getvalue(), '')
+        self.assertIn('exceeds byte budget', stderr.getvalue())
+
+    def test_version_one_inputs_can_still_be_checked(self):
+        legacy = build_input(self.brain, self.pid, max_records=1)
+        legacy.pop('input_sha256')
+        legacy['coverage'].pop('omitted_by_reason')
+        legacy['version'] = 'interpretation-1'
+        legacy['input_sha256'] = fingerprint(legacy)
+        result = self.check({'items': [], 'relationships': []}, legacy)
+        self.assertEqual(result['version'], 'interpretation-1')
 
     def test_source_instructions_are_data_and_do_not_grant_tools(self):
         self.assertIn('untrusted quoted data',self.payload['instructions'])

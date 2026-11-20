@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from brain.core import Brain, initialize, read, write
 from brain.desktop_data import DesktopReader
+from brain.state import ProjectState
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 try:
@@ -58,6 +59,12 @@ class DesktopDataTests(unittest.TestCase):
         self.assertEqual(capture['snapshot'], sid)
         self.assertEqual(before, self.fingerprint())
 
+    def test_project_load_reuses_the_same_maintained_state_for_overview(self):
+        with patch.object(ProjectState, 'view', autospec=True, side_effect=ProjectState.view) as view:
+            data = self.reader.project(self.pid)
+        view.assert_called_once()
+        self.assertEqual(data['briefing']['maintained_state']['snapshot'], data['state']['snapshot'])
+
     def test_shared_search_never_reads_unapproved_project(self):
         with patch.object(Brain, 'snapshot', side_effect=AssertionError('Private snapshot read')):
             self.assertEqual(self.reader.search(None, 'polling', ['python'])['results'], [])
@@ -69,6 +76,59 @@ class DesktopDataTests(unittest.TestCase):
         result = self.reader.search(None, 'polling', ['python'])['results']
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]['snapshot'], self.brain.project(self.pid)['snapshot'])
+
+    def approve_polling(self):
+        record = self.reader.search(self.pid, 'polling')['results'][0]
+        self.brain.promote(self.pid, record['id'], ['python'], 'Reviewed polling scope')
+        return self.reader.search(None, 'polling', ['python'])['results'][0]
+
+    def test_shared_evidence_is_the_approved_statement_at_the_pinned_capture(self):
+        self.note.write_text('# Background\nPrivate preceding context.\n'
+                             '# Decision\nUse polling because events arrive asynchronously.\n'
+                             '# Internal\nPrivate following context.\n')
+        self.brain.ingest(self.source)
+        record = self.approve_polling()
+        self.brain.ingest(self.source)  # Same evidence, newer capture.
+        before = self.fingerprint()
+        evidence = self.reader.shared_evidence(self.pid, record['snapshot'], record['id'], ['PYTHON'])
+        self.assertEqual(evidence['text'], record['statement'])
+        self.assertEqual(evidence['snapshot'], record['snapshot'])
+        self.assertEqual(evidence['start_line'], 3)
+        self.assertEqual(evidence['end_line'], 4)
+        self.assertNotIn('total_lines', evidence)
+        self.assertEqual(before, self.fingerprint())
+
+    def test_shared_evidence_respects_the_character_cutoff_within_a_source_line(self):
+        self.note.write_text('Decision: Use polling. ' + 'x' * 1800 + ' Private remainder.\n')
+        self.brain.ingest(self.source)
+        record = self.approve_polling()
+        evidence = self.reader.shared_evidence(self.pid, record['snapshot'], record['id'], ['python'])
+        self.assertEqual(evidence['text'], record['statement'])
+        self.assertEqual(len(evidence['text']), 1800)
+
+    def test_shared_evidence_rechecks_expiry_revocation_and_current_record(self):
+        record = self.approve_polling()
+        approval_path = self.store / 'shared' / (record['id'] + '.json')
+        approval = read(approval_path)
+        args = (self.pid, record['snapshot'], record['id'])
+        with self.assertRaisesRegex(ValueError, 'Sharing approval'):
+            self.reader.shared_evidence(*args, ['sqlite'])
+        with patch('brain.core.time.time', return_value=approval['review_after'] + 1):
+            with self.assertRaisesRegex(ValueError, 'Sharing approval'):
+                self.reader.shared_evidence(*args, ['python'])
+        approval_path.unlink()
+        with self.assertRaisesRegex(ValueError, 'Sharing approval'):
+            self.reader.shared_evidence(*args, ['python'])
+        write(approval_path, approval)
+        replacement = next(r for r in self.brain.snapshot(self.pid)['records'] if r['id'] != record['id'])
+        self.brain.relate(self.pid, record['id'], replacement['id'], 'supersedes', 'Reviewed precedence')
+        with self.assertRaisesRegex(ValueError, 'Sharing approval'):
+            self.reader.shared_evidence(*args, ['python'])
+        self.assertEqual(self.reader.shared_evidence(*args, ['python'], history=True)['text'], record['statement'])
+        self.note.write_text('# Decision\nReplace polling with explicit refresh.\n')
+        self.brain.ingest(self.source)
+        with self.assertRaisesRegex(ValueError, 'Sharing approval'):
+            self.reader.shared_evidence(*args, ['python'], history=True)
 
     def test_writer_contention_is_reported_without_waiting(self):
         with self.brain.lock():
@@ -230,12 +290,23 @@ class DesktopUiTests(DesktopDataTests):
 
     def test_failed_store_switch_clears_previous_store_content(self):
         w = self.window
+        w.project_filter.setText('source')
+        w.query.setText('polling')
+        self.wait(lambda: w.results.count() == 1)
+        w.open_list_item(w.results.item(0))
+        self.wait(lambda: w.evidence_result is not None)
         with patch('brain.desktop.QFileDialog.getExistingDirectory', return_value=str(self.root / 'missing')):
             w.choose_store()
         self.wait(lambda: not w.jobs)
         self.assertEqual(w.project_list.count(), 0)
         self.assertEqual(w.knowledge.count(), 0)
         self.assertEqual(w.overview_layout.count(), 0)
+        self.assertEqual(w.title.text(), 'Your project memory')
+        self.assertNotIn('Last capture', w.subtitle.text())
+        self.assertEqual(w.project_filter.text(), '')
+        self.assertEqual(w.query.text(), '')
+        self.assertEqual(w.detail.toPlainText(), '')
+        self.assertIsNone(w.evidence_result)
         self.assertIsNone(w.project_id)
 
     def test_search_scope_is_restored_per_project(self):
@@ -302,7 +373,9 @@ class DesktopUiTests(DesktopDataTests):
     def test_shared_search_opens_originating_projects_evidence(self):
         other = self.root / 'shared-source'
         other.mkdir()
-        (other / 'shared.md').write_text('# Decision\nUse shared polling only with compatible labels.\n')
+        (other / 'shared.md').write_text('# Background\nPrivate preceding context.\n'
+                                       '# Decision\nUse shared polling only with compatible labels.\n'
+                                       '# Internal\nPrivate following context.\n')
         origin = self.brain.ingest(other)['project_id']
         record = self.reader.search(origin, 'polling')['results'][0]
         self.brain.promote(origin, record['id'], ['python'], 'Reviewed polling scope')
@@ -314,8 +387,21 @@ class DesktopUiTests(DesktopDataTests):
         w.open_list_item(w.results.item(0))
         self.wait(lambda: w.evidence_result is not None)
         self.assertEqual(w.evidence_result['project_id'], origin)
-        self.assertIn('compatible labels', w.evidence.toPlainText())
-        self.assertNotIn('partial writes', w.evidence.toPlainText())
+        self.assertEqual(w.evidence.toPlainText(), record['statement'])
+        self.assertFalse(w.previous_lines.isEnabled())
+        self.assertFalse(w.next_lines.isEnabled())
+        w.copy_excerpt.click()
+        self.assertEqual(self.app.clipboard().text(), record['statement'])
+
+        w.close_inspector()
+        approval_path = self.store / 'shared' / (record['id'] + '.json')
+        write(approval_path, dict(read(approval_path), review_after=0))
+        w.open_list_item(w.results.item(0))
+        self.wait(lambda: 'Sharing approval is unavailable' in w.evidence.toPlainText())
+        self.assertNotIn(record['statement'], w.detail.toPlainText())
+        self.assertIsNone(w.evidence_result)
+        self.assertFalse(w.copy_excerpt.isEnabled())
+        self.assertFalse(w.copy_citation.isEnabled())
 
     def test_evidence_paging_copy_and_retry_after_busy_writer(self):
         self.note.write_text('\n'.join(f'Line {i}: retained evidence' for i in range(1, 451)) + '\n')

@@ -1,6 +1,7 @@
 """Read-only, deterministic evidence briefings; never inferred completion claims."""
-from collections import Counter
+from collections import Counter, defaultdict, deque
 from datetime import datetime, timezone
+from heapq import heapify, heappop, heappush
 from pathlib import PurePosixPath
 import re
 
@@ -129,17 +130,24 @@ def quality(record):
 
 def select_diverse(records, limit):
     """Prefer explicit substantive excerpts, then broaden source representation."""
-    ranked = sorted(records, key=quality)
-    selected, seen_text, path_counts = [], set(), Counter()
-    while ranked and len(selected) < limit:
-        best = min(ranked, key=lambda r: (path_counts[r['evidence']['path']], quality(r)))
-        ranked.remove(best)
+    by_path = defaultdict(deque)
+    for rank, record in enumerate(sorted(records, key=quality)):
+        by_path[record['evidence']['path']].append((rank, record))
+    # Only the best remaining record from each path can be next.
+    queue = [(0, entries[0][0], path) for path, entries in by_path.items()]
+    heapify(queue)
+    selected, seen_text = [], set()
+    while queue and len(selected) < limit:
+        count, _, path = heappop(queue)
+        entries = by_path[path]
+        _, best = entries.popleft()
         fingerprint = ' '.join(best['statement'].split())
-        if fingerprint in seen_text:
-            continue
-        selected.append(best)
-        seen_text.add(fingerprint)
-        path_counts[best['evidence']['path']] += 1
+        if fingerprint not in seen_text:
+            selected.append(best)
+            seen_text.add(fingerprint)
+            count += 1
+        if entries:
+            heappush(queue, (count, entries[0][0], path))
     return selected
 
 

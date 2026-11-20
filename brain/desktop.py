@@ -689,15 +689,21 @@ class BrainWindow(QMainWindow):
             self.results_note.setText('Shared retrieval requires labels matching the original sharing approval.')
             return
         history = self.include_history.isChecked()
-        self.request('search', lambda reader=self.reader: reader.search(pid, query, technologies, history), self.loaded_search)
+        self.request('search', lambda reader=self.reader: reader.search(pid, query, technologies, history),
+                     lambda value: self.loaded_search(value, technologies, history))
 
-    def loaded_search(self, value):
+    def loaded_search(self, value, technologies, history):
         self.results_title.setText(f"{len(value['results'])} search results")
         for record in value['results']:
             name = self.projects.get(record['project_id'], {}).get('name', record['project_id'])
             row = QListWidgetItem(name + '  ·  ' + words(record['evidence_status']) + '\n' +
                                   ' '.join(record['statement'].split())[:320] + '\n' + record['evidence']['path'])
-            row.setData(Qt.UserRole, ('record', record))
+            if technologies:
+                claim = {'snapshot': record['snapshot'], 'record_id': record['id'],
+                         'technologies': technologies, 'history': history}
+                row.setData(Qt.UserRole, ('shared_record', (record['project_id'], claim)))
+            else:
+                row.setData(Qt.UserRole, ('record', record))
             self.results.addItem(row)
         self.results_note.setText((f"{len(value['omitted'])} results omitted by retrieval limits. " if value['omitted'] else '') +
             ('No matching retained knowledge. Try fewer or different words. ' if not value['results'] else '') + value['limits'])
@@ -710,6 +716,9 @@ class BrainWindow(QMainWindow):
         if kind == 'state':
             relations = [r for r in self.data['state']['relationships'] if value['id'] in (r['from'], r['to'])]
             self.show_item(value['summary'], value['claims'], {**value, 'relationships': relations})
+        elif kind == 'shared_record':
+            pid, claim = value
+            self.show_item('Shared knowledge', [claim], {}, pid)
         else:
             self.show_record(value)
 
@@ -751,7 +760,8 @@ class BrainWindow(QMainWindow):
         self.claims.blockSignals(True)
         self.claims.clear()
         for claim in claims:
-            self.claims.addItem(claim['path'] + ':' + str(claim['start_line']), claim)
+            title = 'Shared excerpt' if 'technologies' in claim else f"{claim['path']}:{claim['start_line']}"
+            self.claims.addItem(title, claim)
         self.claims.blockSignals(False)
         self.inspector.show()
         self.place_inspector()
@@ -783,12 +793,25 @@ class BrainWindow(QMainWindow):
             self.evidence.setPlainText('No retained evidence reference is available for this item.')
             return
         claim, pid = dict(self.claim), self.detail_pid
+        reader = self.reader
         self.evidence.setPlainText('Loading retained evidence…')
-        self.request('evidence', lambda: self.reader.evidence(pid, claim, start), self.loaded_evidence)
+        if 'technologies' in claim:
+            self.request('evidence', lambda: reader.shared_evidence(
+                pid, claim['snapshot'], claim['record_id'], claim['technologies'], claim['history']), self.loaded_evidence)
+        else:
+            self.request('evidence', lambda: reader.evidence(pid, claim, start), self.loaded_evidence)
 
     def loaded_evidence(self, value):
         self.evidence_result = value
-        self.citation.setText(f"{value['path']}:{value['start_line']}–{value['end_line']}\nCaptured {date(value['created_at'])}\nSnapshot {value['snapshot']}\nProject {value['project_id']} · retained evidence")
+        shared = value['source'] == 'approved_record'
+        scope = 'approved excerpt' if shared else 'retained evidence'
+        self.citation.setText(f"{value['path']}:{value['start_line']}–{value['end_line']}\nCaptured {date(value['created_at'])}\nSnapshot {value['snapshot']}\nProject {value['project_id']} · {scope}")
+        self.copy_excerpt.setEnabled(True)
+        self.copy_citation.setEnabled(True)
+        if shared:
+            self.evidence.setPlainText(value['text'])
+            self.evidence.setExtraSelections([])
+            return
         self.evidence.setPlainText('\n'.join(f'{i:5}  {line}' for i, line in enumerate(value['text'].splitlines(), value['start_line'])))
         highlights = []
         for line in range(max(self.claim['start_line'], value['start_line']), min(self.claim['end_line'], value['end_line']) + 1):
@@ -798,13 +821,11 @@ class BrainWindow(QMainWindow):
             selection.format.setProperty(QTextCharFormat.FullWidthSelection, True)
             highlights.append(selection)
         self.evidence.setExtraSelections(highlights)
-        self.copy_excerpt.setEnabled(True)
-        self.copy_citation.setEnabled(True)
         self.previous_lines.setEnabled(value['start_line'] > 1)
         self.next_lines.setEnabled(value['end_line'] < value['total_lines'])
 
     def page_evidence(self, offset):
-        if self.evidence_result:
+        if self.evidence_result and self.evidence_result['source'] != 'approved_record':
             self.load_evidence(start=max(1, self.evidence_result['start_line'] + offset))
 
     def copy_text(self):
@@ -849,8 +870,22 @@ class BrainWindow(QMainWindow):
             self.save_view()
             self.reader = DesktopReader(path)
             self.project_id, self.data = None, None
+            self.projects = {}
             self.views.clear()
             self.trail.clear()
+            self.title.setText('Your project memory')
+            self.subtitle.setText('Choose a project to continue.')
+            self.project_filter.clear()
+            self.query.clear()
+            self.technologies.clear()
+            self.scope.setCurrentIndex(0)
+            self.results_title.clear()
+            self.results_note.clear()
+            self.claims.blockSignals(True)
+            self.claims.clear()
+            self.claims.blockSignals(False)
+            self.detail.clear()
+            self.load_evidence()
             self.store_label.setText(path)
             self.store_label.setToolTip(path)
             self.reload()
